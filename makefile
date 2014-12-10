@@ -70,7 +70,6 @@ else
     EXE :=
 endif
 
-# UNDONE: -mcpu=cortex-m3
 # Flags to use when cross-compiling ARM binaries.
 ARM_GCCFLAGS := -Os -g3 -mthumb -mthumb-interwork -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
 ARM_GCCFLAGS += -ffunction-sections -fdata-sections -fno-exceptions -fno-delete-null-pointer-checks -fomit-frame-pointer
@@ -190,41 +189,29 @@ $(eval $(call make_library,CPPUTEST,CppUTest/src/CppUTest CppUTest/src/Platforms
 $(eval $(call make_tests,CPPUTEST,CppUTest/tests,,))
 
 # CrashCatcher core sources to build and test.
-ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core)
-ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core)
+ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src)
+ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src)
 $(eval $(call make_library,CORE,Core/src,libCrashCatcher.a,include Core/tests))
 $(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,))
 $(eval $(call run_gcov,CORE))
 
-# Sources for newlib and mbed's LocalFileSystem semihosting support.
-#ARMV7M_SEMIHOST_OBJ := $(call armv7m_objs,semihost)
-#ARMV7M_SEMIHOST_OBJ += $(call armv7m_objs,semihost/newlib)
-#ARMV7M_SEMIHOST_OBJ += $(call armv7m_objs,semihost/mbed)
-#DEPS += $(call add_deps,SEMIHOST)
 
-# Sources for ARMv7-M debug architecture.
-#ARM_ARMV7M_OBJ := $(call armv7m_objs,architectures/armv7-m)
-#DEPS += $(call add_deps,ARMV7M)
-
-# Native memory access sources.
-#ARMV7M_NATIVE_MEM_OBJ := $(call armv7m_objs,memory/native)
-#DEPS += $(call add_deps,NATIVE_MEM)
-
-# LPC176x device sources.
-#ARMV7M_LPC176X_OBJ := $(call armv7m_objs,devices/lpc176x)
-#DEPS += $(call add_deps,LPC176X)
+# libCrashCatcher_armv6m.a
+ARMV6M_LIBCRASHCATCHER_LIB = $(ARMV6M_LIBDIR)/libCrashCatcher_armv6m.a
+$(ARMV6M_LIBCRASHCATCHER_LIB) : INCLUDES := $(INCLUDES) core/src
+$(ARMV6M_LIBCRASHCATCHER_LIB) : $(ARMV6M_CORE_OBJ)
+	$(call build_lib,ARM)
 
 
-# mbed 1768 board
-#ARMV7M_MBED1768_OBJ := $(call armv7m_objs,boards/mbed1768)
-#ARMV7M_MBED1768_LIB = $(ARMV7M_LIBDIR)/libmri_mbed1768.a
-#$(ARMV7M_MBED1768_LIB) : INCLUDES := $(INCLUDES) boards/mbed1768 devices/lpc176x architecture/armv7-m cmsis/LPC17xx
-#$(ARMV7M_MBED1768_LIB) : $(ARMV7M_CORE_OBJ) $(ARMV7M_SEMIHOST_OBJ) $(ARM_ARMV7M_OBJ) $(ARMV7M_NATIVE_MEM_OBJ) $(ARMV7M_LPC176X_OBJ) $(ARMV7M_MBED1768_OBJ)
-#	$(call build_lib,ARMV7M)
-#DEPS += $(call add_deps,MBED1768)
+# libCrashCatcher_armv7m.a
+ARMV7M_LIBCRASHCATCHER_LIB = $(ARMV7M_LIBDIR)/libCrashCatcher_armv7m.a
+$(ARMV7M_LIBCRASHCATCHER_LIB) : INCLUDES := $(INCLUDES) core/src
+$(ARMV7M_LIBCRASHCATCHER_LIB) : $(ARMV7M_CORE_OBJ)
+	$(call build_lib,ARM)
+
 
 # All libraries to be built for ARM target.
-#ARM_LIBS : $(ARMV7M_MBED1768_LIB)
+ARM_LIBS : $(ARMV6M_LIBCRASHCATCHER_LIB) $(ARMV7M_LIBCRASHCATCHER_LIB)
 
 
 # *** Pattern Rules ***
