@@ -27,6 +27,7 @@ typedef struct DumpMemoryItem
 
 static uint32_t                        g_dumpStartCallCount;
 static uint32_t                        g_dumpEndCallCount;
+static uint32_t                        g_dumpLoopCount;
 static uint32_t                        g_dumpMemoryItemCount;
 static DumpMemoryItem*                 g_pDumpMemoryItems;
 static const CrashCatcherMemoryRegion* g_pRegions;
@@ -42,6 +43,7 @@ void DumpMocks_Init(void)
     g_dumpMemoryItemCount = 0;
     g_pDumpMemoryItems = NULL;
     g_pRegions = NULL;
+    g_dumpLoopCount = 0;
 }
 
 
@@ -67,6 +69,12 @@ uint32_t DumpMocks_GetDumpStartCallCount(void)
 uint32_t DumpMocks_GetDumpEndCallCount(void)
 {
     return g_dumpEndCallCount;
+}
+
+
+void DumpMocks_SetDumpEndLoops(uint32_t timesToReturnTryAgain)
+{
+    g_dumpLoopCount = timesToReturnTryAgain;
 }
 
 
@@ -127,5 +135,13 @@ void CrashCatcher_DumpMemory(const void* pvMemory, CrashCatcherElementSizes elem
 CrashCatcherReturnCodes CrashCatcher_DumpEnd(void)
 {
     g_dumpEndCallCount++;
-    return CRASH_CATCHER_EXIT;
+    if (g_dumpLoopCount)
+    {
+        g_dumpLoopCount--;
+        return CRASH_CATCHER_TRY_AGAIN;
+    }
+    else
+    {
+        return CRASH_CATCHER_EXIT;
+    }
 }

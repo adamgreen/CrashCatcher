@@ -171,6 +171,17 @@ TEST(CrashCatcher, DumpRegistersOnly_PSP_StackAlignmentNotNeeded)
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
+TEST(CrashCatcher, DumpEndReturnTryAgainOnce_ShouldDumpTwice)
+{
+    DumpMocks_SetDumpEndLoops(1);
+    CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(2, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(14, DumpMocks_GetDumpMemoryCallCount());
+    validateSignatureAndDumpedRegisters(USING_MSP);
+    validateSignatureAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(2, DumpMocks_GetDumpEndCallCount());
+}
+
 TEST(CrashCatcher, DumpOneDoubleByteRegion)
 {
     static const CrashCatcherMemoryRegion regions[] = { {m_memoryStart, m_memoryStart + 2, CRASH_CATCHER_BYTE},

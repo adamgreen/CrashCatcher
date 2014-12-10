@@ -55,8 +55,15 @@ TEST(DumpMocks, GetDumpStartCallCount_MakeTwoCalls_ShouldReturn2)
     CHECK_EQUAL(2, DumpMocks_GetDumpStartCallCount());
 }
 
-TEST(DumpMocks, DumpEndCall_ShouldIndicateExitIsWanted)
+TEST(DumpMocks, DumpEndCall_ShouldIndicateExitIsWantedOnFirstCall)
 {
+    CHECK_EQUAL(CRASH_CATCHER_EXIT, CrashCatcher_DumpEnd());
+}
+
+TEST(DumpMocks, DumpEndLoops_SetTo1_ShouldIndicateOneTryAgainAndThenExit)
+{
+    DumpMocks_SetDumpEndLoops(1);
+    CHECK_EQUAL(CRASH_CATCHER_TRY_AGAIN, CrashCatcher_DumpEnd());
     CHECK_EQUAL(CRASH_CATCHER_EXIT, CrashCatcher_DumpEnd());
 }
 

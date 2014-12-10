@@ -47,7 +47,9 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
     Object object = initStackPointers(pExceptionRegisters);
     advanceStackPointerToValueBeforeException(&object);
 
-    CrashCatcher_DumpStart();
+    do
+    {
+        CrashCatcher_DumpStart();
         dumpSignature(&object);
         dumpR0toR3(&object);
         dumpR4toR11(&object);
@@ -56,7 +58,8 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         dumpLR_PC_PSR(&object);
         dumpExceptionPSR(&object);
         dumpMemoryRegions();
-    CrashCatcher_DumpEnd();
+    }
+    while (CrashCatcher_DumpEnd() == CRASH_CATCHER_TRY_AGAIN);
 }
 
 static Object initStackPointers(const CrashCatcherExceptionRegisters* pExceptionRegisters)

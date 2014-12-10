@@ -24,6 +24,7 @@ void DumpMocks_Uninit(void);
 
 uint32_t DumpMocks_GetDumpStartCallCount(void);
 uint32_t DumpMocks_GetDumpEndCallCount(void);
+void     DumpMocks_SetDumpEndLoops(uint32_t timesToReturnTryAgain);
 
 void     DumpMocks_SetMemoryRegions(const CrashCatcherMemoryRegion* pRegions);
 
