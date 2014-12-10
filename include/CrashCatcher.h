@@ -15,6 +15,11 @@
 #ifndef _CRASH_CATCHER_H_
 #define _CRASH_CATCHER_H_
 
+
+#include <stdint.h>
+#include <stdlib.h>
+
+
 #define TRUE  1
 #define FALSE 0
 

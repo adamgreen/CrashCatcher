@@ -82,7 +82,7 @@ static uint32_t getAddressOfExceptionStack(const CrashCatcherExceptionRegisters*
 static const void* uint32AddressToPointer(uint32_t address)
 {
     if (sizeof(uint32_t*) == 8)
-        return (const void*)((uint64_t)address | g_crashCatcherTestBaseAddress);
+        return (const void*)(unsigned long)((uint64_t)address | g_crashCatcherTestBaseAddress);
     else
         return (const void*)(unsigned long)address;
 }
