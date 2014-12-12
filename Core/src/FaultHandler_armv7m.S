@@ -42,7 +42,7 @@ HardFault_Handler:
     mrs     r1, xpsr
     mrs     r2, psp
     mrs     r3, msp
-    ldr     sp, =g_crashCatcherStack
+    ldr     sp, =(g_crashCatcherStack + 4 * 256)
     push.w  {r1-r11,lr}
 
     // Call CrashCatcher_Entry with first argument pointing to registers that were just stacked.

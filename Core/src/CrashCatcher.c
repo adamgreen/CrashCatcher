@@ -20,7 +20,9 @@
 extern uint64_t g_crashCatcherTestBaseAddress;
 
 
-/* Fault handler will switch MSP to use this area as the stack while CrashCatcher code is running. */
+/* Fault handler will switch MSP to use this area as the stack while CrashCatcher code is running.
+   NOTE: If you change the size of this buffer, it also needs to be changed in the HardFault_Handler (in
+         FaultHandler_arm*.S) when initializing the stack pointer. */
 uint32_t g_crashCatcherStack[256];
 
 
