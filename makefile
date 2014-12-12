@@ -203,6 +203,12 @@ $(eval $(call make_tests,HEX_DUMP,HexDump/tests HexDump/mocks,include HexDump/te
 $(eval $(call run_gcov,HEX_DUMP))
 
 
+# StdIO implementation of thunks for HexDump.
+ARMV6M_STDIO_OBJ    := $(call armv6m_objs,samples/StdIO)
+ARMV7M_STDIO_OBJ    := $(call armv7m_objs,samples/StdIO)
+DEPS                += $$(call add_deps,STDIO)
+
+
 # libCrashCatcher_armv6m.a
 ARMV6M_LIBCRASHCATCHER_LIB = $(ARMV6M_LIBDIR)/libCrashCatcher_armv6m.a
 $(ARMV6M_LIBCRASHCATCHER_LIB) : INCLUDES := $(INCLUDES)
@@ -231,9 +237,24 @@ $(ARMV7M_LIBCRASHCATCHER_HEXDUMP_LIB) : $(ARMV7M_CORE_OBJ) $(ARMV7M_HEX_DUMP_OBJ
 	$(call build_lib,ARM)
 
 
+# libCrashCatcher_StdIO_armv6m.a
+ARMV6M_LIBCRASHCATCHER_STDIO_LIB = $(ARMV6M_LIBDIR)/libCrashCatcher_StdIO_armv6m.a
+$(ARMV6M_LIBCRASHCATCHER_STDIO_LIB) : INCLUDES := $(INCLUDES)
+$(ARMV6M_LIBCRASHCATCHER_STDIO_LIB) : $(ARMV6M_CORE_OBJ) $(ARMV6M_HEX_DUMP_OBJ) $(ARMV6M_STDIO_OBJ)
+	$(call build_lib,ARM)
+
+
+# libCrashCatcher_StdIO_armv7m.a
+ARMV7M_LIBCRASHCATCHER_STDIO_LIB = $(ARMV7M_LIBDIR)/libCrashCatcher_StdIO_armv7m.a
+$(ARMV7M_LIBCRASHCATCHER_STDIO_LIB) : INCLUDES := $(INCLUDES)
+$(ARMV7M_LIBCRASHCATCHER_STDIO_LIB) : $(ARMV7M_CORE_OBJ) $(ARMV7M_HEX_DUMP_OBJ) $(ARMV7M_STDIO_OBJ)
+	$(call build_lib,ARM)
+
+
 # All libraries to be built for ARM target.
 ARM_LIBS : $(ARMV6M_LIBCRASHCATCHER_LIB) $(ARMV7M_LIBCRASHCATCHER_LIB) \
-           $(ARMV6M_LIBCRASHCATCHER_HEXDUMP_LIB) $(ARMV7M_LIBCRASHCATCHER_HEXDUMP_LIB)
+           $(ARMV6M_LIBCRASHCATCHER_HEXDUMP_LIB) $(ARMV7M_LIBCRASHCATCHER_HEXDUMP_LIB) \
+           $(ARMV6M_LIBCRASHCATCHER_STDIO_LIB) $(ARMV7M_LIBCRASHCATCHER_STDIO_LIB)
 
 
 # *** Pattern Rules ***
