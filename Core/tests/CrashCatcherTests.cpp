@@ -243,3 +243,17 @@ TEST(CrashCatcher, DumpMultipleRegions)
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(12, &m_memory[3], CRASH_CATCHER_WORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
+
+TEST(CrashCatcher, SimulateStackOverflow_ShouldAppendExtraMagicWordToEndOfData)
+{
+    uint32_t magicValueIndicatingStackOverflow = 0xACCE55ED;
+
+    DumpMocks_EnableDumpStartStackOverflowSimulation();
+    CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateSignatureAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &magicValueIndicatingStackOverflow,
+                                              CRASH_CATCHER_BYTE, sizeof(magicValueIndicatingStackOverflow)));
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}

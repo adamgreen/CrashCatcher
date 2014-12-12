@@ -38,6 +38,7 @@ static Object initStackPointers(const CrashCatcherExceptionRegisters* pException
 static uint32_t getAddressOfExceptionStack(const CrashCatcherExceptionRegisters* pExceptionRegisters);
 static const void* uint32AddressToPointer(uint32_t address);
 static void advanceStackPointerToValueBeforeException(Object* pObject);
+static void setStackSentinel(void);
 static void dumpSignature(const Object* pObject);
 static void dumpR0toR3(const Object* pObject);
 static void dumpR4toR11(const Object* pObject);
@@ -46,6 +47,7 @@ static void dumpSP(const Object* pObject);
 static void dumpLR_PC_PSR(const Object* pObject);
 static void dumpExceptionPSR(const Object* pObject);
 static void dumpMemoryRegions(void);
+static void checkStackSentinelForStackOverflow(void);
 
 
 void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegisters)
@@ -55,6 +57,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
 
     do
     {
+        setStackSentinel();
         CrashCatcher_DumpStart();
         dumpSignature(&object);
         dumpR0toR3(&object);
@@ -64,6 +67,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         dumpLR_PC_PSR(&object);
         dumpExceptionPSR(&object);
         dumpMemoryRegions();
+        checkStackSentinelForStackOverflow();
     }
     while (CrashCatcher_DumpEnd() == CRASH_CATCHER_TRY_AGAIN);
 }
@@ -99,6 +103,11 @@ static void advanceStackPointerToValueBeforeException(Object* pObject)
     pObject->sp += 8 * sizeof(uint32_t);
     /* Cortex-M processor may also have had to force 8-byte alignment before auto stacking registers. */
     pObject->sp |= (pObject->pSP->psr & PSR_STACK_ALIGN) ? 4 : 0;
+}
+
+static void setStackSentinel(void)
+{
+    g_crashCatcherStack[0] = STACK_SENTINEL;
 }
 
 static void dumpSignature(const Object* pObject)
@@ -152,5 +161,14 @@ static void dumpMemoryRegions(void)
                                 pRegion->elementSize,
                                 (pRegion->endAddress - pRegion->startAddress) / pRegion->elementSize);
         pRegion++;
+    }
+}
+
+static void checkStackSentinelForStackOverflow(void)
+{
+    if (g_crashCatcherStack[0] != STACK_SENTINEL)
+    {
+        uint32_t value = STACK_SENTINEL;
+        CrashCatcher_DumpMemory(&value, CRASH_CATCHER_BYTE, sizeof(value));
     }
 }

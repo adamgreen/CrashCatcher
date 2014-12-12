@@ -25,6 +25,11 @@
 #define PSR_STACK_ALIGN (1 << 9)
 
 
+/* This magic sentinel value is placed at the bottom of stack and validated to make sure that the stack doesn't overflow
+   and overwrite it. */
+#define STACK_SENTINEL 0xACCE55ED
+
+
 /* This structure contains the integer registers that are automatically stacked by Cortex-M processor when it enters
    an exception handler. */
 typedef struct
@@ -57,6 +62,11 @@ typedef struct
     uint32_t r11;
     uint32_t exceptionLR;
 } CrashCatcherExceptionRegisters;
+
+
+// This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
+// processor.  Unit tests can write to this buffer to simulate stack overflow.
+extern uint32_t g_crashCatcherStack[];
 
 
 /* The main entry point into CrashCatcher.  Is called from the HardFault exception handler and unit tests. */
