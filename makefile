@@ -113,7 +113,7 @@ INCLUDES := include
 DEPS :=
 
 # Useful macros.
-objs = $(addprefix $2/,$(addsuffix .o,$(basename $(wildcard $1/*.c $1/*.cpp $1/*.S))))
+objs = $(addprefix $2/,$(addsuffix .o,$(basename $(wildcard $1/*.c $1/*.cpp))))
 armv6m_objs = $(call objs,$1,$(ARMV6M_OBJDIR))
 armv7m_objs = $(call objs,$1,$(ARMV7M_OBJDIR))
 host_objs = $(call objs,$1,$(HOST_OBJDIR))
@@ -189,7 +189,7 @@ $(eval $(call make_tests,CPPUTEST,CppUTest/tests,,))
 
 # CrashCatcher Core sources to build and test.
 ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src)
-ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src)
+ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src) $(ARMV7M_OBJDIR)/Core/src/FaultHandler_armv7m.o
 $(eval $(call make_library,CORE,Core/src,libCrashCatcher.a,include Core/tests))
 $(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,))
 $(eval $(call run_gcov,CORE))

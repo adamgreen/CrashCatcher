@@ -20,6 +20,10 @@
 extern uint64_t g_crashCatcherTestBaseAddress;
 
 
+/* Fault handler will switch MSP to use this area as the stack while CrashCatcher code is running. */
+uint32_t g_crashCatcherStack[256];
+
+
 typedef struct
 {
     const CrashCatcherExceptionRegisters* pExceptionRegisters;
