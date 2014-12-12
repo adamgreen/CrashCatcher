@@ -191,7 +191,7 @@ TEST(CrashCatcher, DumpOneDoubleByteRegion)
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
     validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, sizeof(regions[0])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &m_memory, CRASH_CATCHER_BYTE, 2));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
@@ -205,7 +205,7 @@ TEST(CrashCatcher, DumpOneWordRegion)
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
     validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, sizeof(regions[0])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &m_memory, CRASH_CATCHER_WORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
@@ -219,7 +219,7 @@ TEST(CrashCatcher, DumpOneHalfwordRegion)
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
     validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, sizeof(regions[0])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &m_memory, CRASH_CATCHER_HALFWORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
@@ -235,11 +235,11 @@ TEST(CrashCatcher, DumpMultipleRegions)
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(13, DumpMocks_GetDumpMemoryCallCount());
     validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, sizeof(regions[0])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &m_memory, CRASH_CATCHER_BYTE, 1));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, &regions[1], CRASH_CATCHER_BYTE, sizeof(regions[1])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, &regions[1], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &m_memory[1], CRASH_CATCHER_HALFWORD, 1));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &regions[2], CRASH_CATCHER_BYTE, sizeof(regions[2])));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &regions[2], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(12, &m_memory[3], CRASH_CATCHER_WORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }

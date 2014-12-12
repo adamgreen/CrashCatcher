@@ -140,7 +140,8 @@ static void dumpMemoryRegions(void)
     const CrashCatcherMemoryRegion* pRegion = CrashCatcher_GetMemoryRegions();
     while (pRegion && pRegion->startAddress != 0xFFFFFFFF)
     {
-        CrashCatcher_DumpMemory(pRegion, CRASH_CATCHER_BYTE, sizeof(*pRegion));
+        /* Just dump the two addresses in pRegion.  The element size isn't required. */
+        CrashCatcher_DumpMemory(pRegion, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t));
         CrashCatcher_DumpMemory(uint32AddressToPointer(pRegion->startAddress),
                                 pRegion->elementSize,
                                 (pRegion->endAddress - pRegion->startAddress) / pRegion->elementSize);
