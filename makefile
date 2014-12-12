@@ -25,7 +25,7 @@ endif
 arm : ARM_LIBS
 
 # UNDONE: Maybe I can just add to a list automatically
-host : RUN_CPPUTEST_TESTS RUN_CORE_TESTS
+host : RUN_CPPUTEST_TESTS RUN_CORE_TESTS RUN_HEX_DUMP_TESTS
 
 all : arm host
 
@@ -188,12 +188,21 @@ endef
 $(eval $(call make_library,CPPUTEST,CppUTest/src/CppUTest CppUTest/src/Platforms/Gcc,libCppUTest.a,CppUTest/include))
 $(eval $(call make_tests,CPPUTEST,CppUTest/tests,,))
 
-# CrashCatcher core sources to build and test.
+
+# CrashCatcher Core sources to build and test.
 ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src)
 ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src)
 $(eval $(call make_library,CORE,Core/src,libCrashCatcher.a,include Core/tests))
 $(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,))
 $(eval $(call run_gcov,CORE))
+
+
+# CrashCatcher HexDump sources to build and test.
+ARMV6M_HEX_DUMP_OBJ    := $(call armv6m_objs,HexDump/src)
+ARMV7M_HEX_DUMP_OBJ    := $(call armv7m_objs,HexDump/src)
+$(eval $(call make_library,HEX_DUMP,HexDump/src,libHexDump.a,include HexDump/tests))
+$(eval $(call make_tests,HEX_DUMP,HexDump/tests HexDump/mocks,include HexDump/tests HexDump/mocks HexDump/src Core/src,$(HOST_CORE_LIB)))
+$(eval $(call run_gcov,HEX_DUMP))
 
 
 # libCrashCatcher_armv6m.a
