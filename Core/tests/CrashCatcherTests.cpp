@@ -246,14 +246,14 @@ TEST(CrashCatcher, DumpMultipleRegions)
 
 TEST(CrashCatcher, SimulateStackOverflow_ShouldAppendExtraMagicWordToEndOfData)
 {
-    uint32_t magicValueIndicatingStackOverflow = 0xACCE55ED;
+    uint8_t magicValueIndicatingStackOverflow[4] = {0xAC, 0xCE, 0x55, 0xED};
 
     DumpMocks_EnableDumpStartStackOverflowSimulation();
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
     validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &magicValueIndicatingStackOverflow,
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, magicValueIndicatingStackOverflow,
                                               CRASH_CATCHER_BYTE, sizeof(magicValueIndicatingStackOverflow)));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }

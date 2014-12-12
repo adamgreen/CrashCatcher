@@ -168,7 +168,7 @@ static void checkStackSentinelForStackOverflow(void)
 {
     if (g_crashCatcherStack[0] != STACK_SENTINEL)
     {
-        uint32_t value = STACK_SENTINEL;
-        CrashCatcher_DumpMemory(&value, CRASH_CATCHER_BYTE, sizeof(value));
+        uint8_t value[4] = {0xAC, 0xCE, 0x55, 0xED};
+        CrashCatcher_DumpMemory(value, CRASH_CATCHER_BYTE, sizeof(value));
     }
 }
