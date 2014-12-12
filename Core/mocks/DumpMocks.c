@@ -13,6 +13,7 @@
    limitations under the License.
 */
 #include <assert.h>
+#include <CrashCatcherPriv.h>
 #include <DumpMocks.h>
 #include <string.h>
 
@@ -26,6 +27,7 @@ typedef struct DumpMemoryItem
 
 
 static uint32_t                        g_dumpStartCallCount;
+static int                             g_dumpStartSimulateStackOverflow;
 static uint32_t                        g_dumpEndCallCount;
 static uint32_t                        g_dumpLoopCount;
 static uint32_t                        g_dumpMemoryItemCount;
@@ -39,6 +41,7 @@ static void freeMemoryItems(void);
 void DumpMocks_Init(void)
 {
     g_dumpStartCallCount = 0;
+    g_dumpStartSimulateStackOverflow = 0;
     g_dumpEndCallCount = 0;
     g_dumpMemoryItemCount = 0;
     g_pDumpMemoryItems = NULL;
@@ -63,6 +66,12 @@ static void freeMemoryItems(void)
 uint32_t DumpMocks_GetDumpStartCallCount(void)
 {
     return g_dumpStartCallCount;
+}
+
+
+void DumpMocks_EnableDumpStartStackOverflowSimulation(void)
+{
+    g_dumpStartSimulateStackOverflow = 1;
 }
 
 
@@ -110,6 +119,8 @@ int DumpMocks_VerifyDumpMemoryItem(uint32_t item, const void* pvMemory, CrashCat
 void CrashCatcher_DumpStart(void)
 {
     g_dumpStartCallCount++;
+    if (g_dumpStartSimulateStackOverflow)
+        g_crashCatcherStack[0] = 0;
 }
 
 

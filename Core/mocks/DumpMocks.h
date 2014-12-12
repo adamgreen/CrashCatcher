@@ -23,6 +23,7 @@ void DumpMocks_Init(void);
 void DumpMocks_Uninit(void);
 
 uint32_t DumpMocks_GetDumpStartCallCount(void);
+void     DumpMocks_EnableDumpStartStackOverflowSimulation(void);
 uint32_t DumpMocks_GetDumpEndCallCount(void);
 void     DumpMocks_SetDumpEndLoops(uint32_t timesToReturnTryAgain);
 

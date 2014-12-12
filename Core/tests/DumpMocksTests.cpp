@@ -16,6 +16,7 @@
 // Include headers from C modules under test.
 extern "C"
 {
+    #include <CrashCatcherPriv.h>
     #include <DumpMocks.h>
 }
 
@@ -189,4 +190,19 @@ TEST(DumpMocks, GetRamRegions_SetToReturnValidPointer_Verify)
     DumpMocks_SetMemoryRegions(regions);
     const CrashCatcherMemoryRegion* pRegions = CrashCatcher_GetMemoryRegions();
     CHECK_EQUAL(regions, pRegions);
+}
+
+TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)
+{
+    g_crashCatcherStack[0] = STACK_SENTINEL;
+    DumpMocks_EnableDumpStartStackOverflowSimulation();
+    CrashCatcher_DumpStart();
+    CHECK_EQUAL(0x00000000, g_crashCatcherStack[0]);
+}
+
+TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateDefaultsToNoModification)
+{
+    g_crashCatcherStack[0] = STACK_SENTINEL;
+    CrashCatcher_DumpStart();
+    CHECK_EQUAL(STACK_SENTINEL, g_crashCatcherStack[0]);
 }
