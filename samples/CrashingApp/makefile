@@ -1,5 +1,5 @@
 # Version to build
-DIRS := mbed1768.mk
+DIRS := mbed1768-StdIO.mk mbed1768-LocalFileSystem.mk
 DIRSCLEAN := $(addsuffix .clean,$(DIRS))
 
 
