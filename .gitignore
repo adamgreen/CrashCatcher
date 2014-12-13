@@ -12,6 +12,7 @@
 *.gcno
 *.gcov
 *.bin
+*.hex
 *.elf
 *.map
 *.disasm

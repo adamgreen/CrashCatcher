@@ -26,7 +26,7 @@ arm : ARM_LIBS
 
 host : RUN_CPPUTEST_TESTS RUN_CORE_TESTS RUN_HEX_DUMP_TESTS
 
-all : arm host
+all : host arm
 
 gcov : RUN_CPPUTEST_TESTS GCOV_CORE GCOV_HEX_DUMP
 

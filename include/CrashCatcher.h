@@ -66,6 +66,10 @@ typedef struct
 } CrashCatcherMemoryRegion;
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 /* The following functions must be provided by a specific dumping implementation.  The Core CrashCatcher calls these
    routines to have an implementation dump the bytes associated with the current crash. */
 
@@ -101,6 +105,16 @@ int CrashCatcher_getc(void);
 
 /* Called to send a character of hex dump data to the user. */
 void CrashCatcher_putc(int c);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/* Macros which can generate a few forms of crashes. */
+#define CRASH_CATCHER_READ_FAULT()          (*(volatile unsigned int*)0xFFFFFFFF)
+#define CRASH_CATCHER_WRITE_FAULT()         (*(volatile unsigned int*)0xFFFFFFFF = 0x0)
+#define CRASH_CATCHER_INVALID_INSTRUCTION() { __asm volatile (".word 0xDE00"); }
 
 
 #endif /* _CRASH_CATCHER_H_ */
