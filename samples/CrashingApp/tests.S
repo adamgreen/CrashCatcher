@@ -15,7 +15,7 @@
 /* Implementation of code to generate various crash scenarios for testing. */
     .text
     .syntax unified
-    .arch armv7-m
+    .arch armv6-m
 
 
     .global testMspMultipleOf8
@@ -26,24 +26,35 @@
     */
 testMspMultipleOf8:
     // Make SP, an even multiple of 8.
-    ldr     sp,=0x10001000
+    mov     r0, sp
+    movs    r1, #4
+    bics    r0, r1
+    mov     sp, r0
+    // Load 0xFFFFFFFF into LR
+    movs    r1, #1
+    rsbs    r0, r1, #0
+    mov     lr, r0
     // Load known values into R0-R12
     movs    r0, #0
-    movs    r1, #1
+    // r1 was already set correctly above when initializing LR.
     movs    r2, #2
     movs    r3, #3
     movs    r4, #4
     movs    r5, #5
     movs    r6, #6
     movs    r7, #7
-    movs    r8, #8
-    movs    r9, #9
-    movs    r10, #10
-    movs    r11, #11
-    movs    r12, #12
-    // Generate a hard fault by reading from 0xFFFFFFFF
-    mvn     lr, #0
-    ldr     lr, [lr]
+    mov     r8, r7
+    mov     r9, r7
+    mov     r10, r7
+    mov     r11, r7
+    mov     r12, r7
+    add     r8, r1
+    add     r9, r2
+    add     r10, r3
+    add     r11, r4
+    add     r12, r5
+    // Generate a hard fault by executing an undefined instruction.
+    .word 0xDE00
     // CrashCatcher_Entry() shouldn't return but if it does, just infinite loop here.
     b       .
     // Let assembler know that we have hit the end of the function.
@@ -59,24 +70,36 @@ testMspMultipleOf8:
     */
 testMspNotMultipleOf8:
     // Make SP, not an even multiple of 8.
-    ldr     sp,=0x10001004
+    mov     r0, sp
+    subs    r0, #8
+    movs    r1, #4
+    orrs    r0, r1
+    mov     sp, r0
+    // Load 0xFFFFFFFF into LR
+    movs    r1, #1
+    rsbs    r0, r1, #0
+    mov     lr, r0
     // Load known values into R0-R12
     movs    r0, #0
-    movs    r1, #1
+    // r1 was already set correctly above when initializing LR.
     movs    r2, #2
     movs    r3, #3
     movs    r4, #4
     movs    r5, #5
     movs    r6, #6
     movs    r7, #7
-    movs    r8, #8
-    movs    r9, #9
-    movs    r10, #10
-    movs    r11, #11
-    movs    r12, #12
-    // Generate a hard fault by reading from 0xFFFFFFFF
-    mvn     lr, #0
-    ldr     lr, [lr]
+    mov     r8, r7
+    mov     r9, r7
+    mov     r10, r7
+    mov     r11, r7
+    mov     r12, r7
+    add     r8, r1
+    add     r9, r2
+    add     r10, r3
+    add     r11, r4
+    add     r12, r5
+    // Generate a hard fault by executing an undefined instruction.
+    .word 0xDE00
     // CrashCatcher_Entry() shouldn't return but if it does, just infinite loop here.
     b       .
     // Let assembler know that we have hit the end of the function.
@@ -92,30 +115,40 @@ testMspNotMultipleOf8:
     */
 testPspMultipleOf8:
     // Make PSP, an even multiple of 8.
-    ldr     r0,=0x10001000
+    mov     r0, sp
+    movs    r1, #4
+    bics    r0, r1
     msr     psp, r0
     // Switch to use of PSP.
-    mov     r0, #3
+    movs    r0, #3
     msr     control,r0
     // Flush instructions so that control mods take effect.
     isb
+    // Load 0xFFFFFFFF into LR
+    movs    r1, #1
+    rsbs    r0, r1, #0
+    mov     lr, r0
     // Load known values into R0-R12
     movs    r0, #0
-    movs    r1, #1
+    // r1 was already set correctly above when initializing LR.
     movs    r2, #2
     movs    r3, #3
     movs    r4, #4
     movs    r5, #5
     movs    r6, #6
     movs    r7, #7
-    movs    r8, #8
-    movs    r9, #9
-    movs    r10, #10
-    movs    r11, #11
-    movs    r12, #12
-    // Generate a hard fault by reading from 0xFFFFFFFF
-    mvn     lr, #0
-    ldr     lr, [lr]
+    mov     r8, r7
+    mov     r9, r7
+    mov     r10, r7
+    mov     r11, r7
+    mov     r12, r7
+    add     r8, r1
+    add     r9, r2
+    add     r10, r3
+    add     r11, r4
+    add     r12, r5
+    // Generate a hard fault by executing an undefined instruction.
+    .word 0xDE00
     // CrashCatcher_Entry() shouldn't return but if it does, just infinite loop here.
     b       .
     // Let assembler know that we have hit the end of the function.

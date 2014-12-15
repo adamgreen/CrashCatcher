@@ -72,8 +72,18 @@ static void enable8ByteStackAlignment()
 // Let CrashCatcher know what RAM contents should be part of crash dump.
 extern "C" const CrashCatcherMemoryRegion* CrashCatcher_GetMemoryRegions(void)
 {
-    static const CrashCatcherMemoryRegion regions[] = { {0x10000000, 0x10008000, CRASH_CATCHER_BYTE},
+    static const CrashCatcherMemoryRegion regions[] = {
+#if defined(TARGET_LPC1768)
+                                                        {0x10000000, 0x10008000, CRASH_CATCHER_BYTE},
                                                         {0x2007C000, 0x20084000, CRASH_CATCHER_BYTE},
-                                                        {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE} };
+                                                        {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
+#elif defined(TARGET_LPC11U24)
+                                                        {0x10000000, 0x10002000, CRASH_CATCHER_BYTE},
+                                                        {0x20004000, 0x20004800, CRASH_CATCHER_BYTE},
+                                                        {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
+#else
+    #error "Target device isn't supported."
+#endif
+                                                      };
     return regions;
 }
