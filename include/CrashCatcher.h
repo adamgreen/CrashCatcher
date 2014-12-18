@@ -31,6 +31,19 @@
 #define CRASH_CATCHER_VERSION_MAJOR   1
 #define CRASH_CATCHER_VERSION_MINOR   0
 
+
+/* This magic value will be found as the last word in a crash dump if the fault handler overflowed the stack while
+   generating the crash dump. */
+#define STACK_SENTINEL 0xACCE55ED
+
+
+/* The crash dump will have one of these entries for each memory region included in the dump file. */
+typedef struct
+{
+    uint32_t                 startAddress;
+    uint32_t                 endAddress;
+} CrashCatcherMemoryRegionInfo;
+
 /* Supported element sizes to be used with CrashCatcher_DumpMemory calls. */
 typedef enum
 {
