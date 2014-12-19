@@ -64,7 +64,7 @@ static void dumpHalfWords(const uint16_t* pMemory, size_t elementCount)
     for (i = 0 ; i < elementCount ; i++)
     {
         uint16_t val = *pMemory++;
-        semihost_write(g_coreDumpFile, (void*)pMemory, sizeof(val), 0);
+        semihost_write(g_coreDumpFile, (void*)&val, sizeof(val), 0);
     }
 }
 
@@ -74,7 +74,7 @@ static void dumpWords(const uint32_t* pMemory, size_t elementCount)
     for (i = 0 ; i < elementCount ; i++)
     {
         uint32_t val = *pMemory++;
-        semihost_write(g_coreDumpFile, (void*)pMemory, sizeof(val), 0);
+        semihost_write(g_coreDumpFile, (void*)&val, sizeof(val), 0);
     }
 }
 
