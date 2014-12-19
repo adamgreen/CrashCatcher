@@ -42,6 +42,8 @@ int main()
         printf("1) MSP Rounded to multiple of 8 bytes.\r\n");
         printf("2) MSP Not Rounded to multiple of 8 bytes.\r\n");
         printf("3) PSP in use.\r\n");
+        printf("4) Precise fault.\r\n");
+        printf("5) Imprecise fault.\r\n");
         printf("Select option: ");
         fgets(buffer, sizeof(buffer), stdin);
         sscanf(buffer, "%d", &option);
@@ -56,6 +58,12 @@ int main()
             break;
         case 3:
             testPspMultipleOf8();
+            break;
+        case 4:
+            CRASH_CATCHER_READ_FAULT();
+            break;
+        case 5:
+            CRASH_CATCHER_WRITE_FAULT();
             break;
         default:
             continue;
