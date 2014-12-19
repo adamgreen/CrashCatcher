@@ -23,11 +23,17 @@ extern "C"
     // Provides the upper 32-bits of 64-bit pointer addresses.
     // When running unit tests on 64-bit machines, the 32-bit emulated PSP an MSP stack pointer addresses don't
     // contain enough bits to make a proper 64-bit pointer.  This provides those upper bits.
-    uint64_t g_crashCatcherTestBaseAddress;
+    extern uint64_t g_crashCatcherTestBaseAddress;
 
     // The unit tests can set this to CRASH_CATCHER_EXIT so that HexDump's CrashCatcher_DumpEnd() will cause the Core
     // to exit and not infinite loop.
-    extern CrashCatcherReturnCodes g_dumpEndReturn;
+    extern CrashCatcherReturnCodes g_crashCatcherDumpEndReturn;
+
+    // The unit tests can point the core to a fake location for the SCB->CPUID register.
+    extern uint32_t* g_pCrashCatcherCpuId;
+
+    // The unit tests can point the core to a fake location for the fault status registers.
+    extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
 
 }
 #include <stdarg.h>
@@ -42,6 +48,8 @@ TEST_GROUP(CrashCatcher)
     CrashCatcherExceptionRegisters m_exceptionRegisters;
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8];
+    uint32_t                       m_emulatedCpuId;
+    uint32_t                       m_emulatedFaultStatusRegisters[5];
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
     uint8_t                        m_memory[20];
@@ -54,9 +62,11 @@ TEST_GROUP(CrashCatcher)
         initPSP();
         initMSP();
         initMemory();
+        initCpuId();
+        initFaultStatusRegisters();
         if (INTPTR_MAX == INT64_MAX)
             g_crashCatcherTestBaseAddress = (uint64_t)&m_emulatedPSP & 0xFFFFFFFF00000000ULL;
-        g_dumpEndReturn = CRASH_CATCHER_EXIT;
+        g_crashCatcherDumpEndReturn = CRASH_CATCHER_EXIT;
         m_expectedOutput[0] = '\0';
     }
 
@@ -105,6 +115,19 @@ TEST_GROUP(CrashCatcher)
         for (size_t i = 0 ; i < sizeof(m_memory) ; i++)
             m_memory[i]= i;
         m_memoryStart = (uint32_t)(unsigned long)m_memory;
+    }
+
+    void initCpuId()
+    {
+        static const uint32_t cpuIdCortexM0 = 0x410CC200;
+        m_emulatedCpuId = cpuIdCortexM0;
+        g_pCrashCatcherCpuId = &m_emulatedCpuId;
+    }
+
+    void initFaultStatusRegisters()
+    {
+        memset(m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
+        g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
     }
 
     void teardown()

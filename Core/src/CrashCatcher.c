@@ -17,7 +17,13 @@
 
 
 /* Test harness will define this value on 64-bit machine to provide upper 32-bits of pointer addresses. */
-extern uint64_t g_crashCatcherTestBaseAddress;
+uint64_t g_crashCatcherTestBaseAddress;
+
+/* The unit tests can point the core to a fake location for the SCB->CPUID register. */
+uint32_t* g_pCrashCatcherCpuId = (uint32_t*)0xE000ED00;
+
+/* The unit tests can point the core to a fake location for the fault status registers. */
+uint32_t* g_pCrashCatcherFaultStatusRegisters = (uint32_t*)0xE000ED28;
 
 
 /* Fault handler will switch MSP to use this area as the stack while CrashCatcher code is running.
@@ -46,8 +52,10 @@ static void dumpR12(const Object* pObject);
 static void dumpSP(const Object* pObject);
 static void dumpLR_PC_PSR(const Object* pObject);
 static void dumpExceptionPSR(const Object* pObject);
-static void dumpMemoryRegions(void);
+static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion);
 static void checkStackSentinelForStackOverflow(void);
+static int isCortexM0Device(void);
+static void dumpFaultStatusRegisters(void);
 
 
 void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegisters)
@@ -66,7 +74,9 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         dumpSP(&object);
         dumpLR_PC_PSR(&object);
         dumpExceptionPSR(&object);
-        dumpMemoryRegions();
+        dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
+        if (!isCortexM0Device())
+            dumpFaultStatusRegisters();
         checkStackSentinelForStackOverflow();
     }
     while (CrashCatcher_DumpEnd() == CRASH_CATCHER_TRY_AGAIN);
@@ -150,9 +160,8 @@ static void dumpExceptionPSR(const Object* pObject)
     CrashCatcher_DumpMemory(&pObject->pExceptionRegisters->exceptionPSR, CRASH_CATCHER_BYTE, sizeof(uint32_t));
 }
 
-static void dumpMemoryRegions(void)
+static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion)
 {
-    const CrashCatcherMemoryRegion* pRegion = CrashCatcher_GetMemoryRegions();
     while (pRegion && pRegion->startAddress != 0xFFFFFFFF)
     {
         /* Just dump the two addresses in pRegion.  The element size isn't required. */
@@ -171,4 +180,23 @@ static void checkStackSentinelForStackOverflow(void)
         uint8_t value[4] = {0xAC, 0xCE, 0x55, 0xED};
         CrashCatcher_DumpMemory(value, CRASH_CATCHER_BYTE, sizeof(value));
     }
+}
+
+static int isCortexM0Device(void)
+{
+    static const uint32_t partNumberCortexM0 = 0xC200;
+    uint32_t              cpuId = *g_pCrashCatcherCpuId;
+    uint32_t              partNumber = cpuId & 0xFFF0;
+
+    return (partNumber == partNumberCortexM0);
+}
+
+static void dumpFaultStatusRegisters(void)
+{
+    uint32_t                 faultStatusRegistersAddress = (uint32_t)(unsigned long)g_pCrashCatcherFaultStatusRegisters;
+    CrashCatcherMemoryRegion faultStatusRegion[] = { {faultStatusRegistersAddress,
+                                                      faultStatusRegistersAddress + 5 * sizeof(uint32_t),
+                                                      CRASH_CATCHER_WORD},
+                                                     {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE} };
+    dumpMemoryRegions(faultStatusRegion);
 }

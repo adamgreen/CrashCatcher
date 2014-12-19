@@ -16,7 +16,7 @@
 #include <CrashCatcher.h>
 
 
-CrashCatcherReturnCodes g_dumpEndReturn = CRASH_CATCHER_TRY_AGAIN;
+CrashCatcherReturnCodes g_crashCatcherDumpEndReturn = CRASH_CATCHER_TRY_AGAIN;
 
 
 static void printString(const char* pString);
@@ -120,5 +120,5 @@ static void dumpWords(const uint32_t* pMemory, size_t elementCount)
 CrashCatcherReturnCodes CrashCatcher_DumpEnd(void)
 {
     printString("\r\nEnd of dump\r\n");
-    return g_dumpEndReturn;
+    return g_crashCatcherDumpEndReturn;
 }
