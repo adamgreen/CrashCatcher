@@ -16,6 +16,8 @@
 #ifndef _CRASH_CATCHER_PRIV_H_
 #define _CRASH_CATCHER_PRIV_H_
 
+#include <stdint.h>
+
 
 /* Bit in LR to indicate whether PSP was used for automatic stacking of registers during exception entry. */
 #define LR_PSP (1 << 2)

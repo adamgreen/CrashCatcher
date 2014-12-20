@@ -57,7 +57,8 @@ void DumpMocks_Uninit(void)
 
 static void freeMemoryItems(void)
 {
-    for (uint32_t i = 0 ; i < g_dumpMemoryItemCount ; i++)
+    uint32_t i;
+    for (i = 0 ; i < g_dumpMemoryItemCount ; i++)
         free(g_pDumpMemoryItems[i].pvMemory);
     free(g_pDumpMemoryItems);
 }

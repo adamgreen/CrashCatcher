@@ -13,6 +13,10 @@
    limitations under the License.
 */
 
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
+#include <string.h>
+
 // Include headers from C modules under test.
 extern "C"
 {
@@ -31,6 +35,7 @@ extern "C"
     // The unit tests can point the core to a fake location for the fault status registers.
     extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
 }
+
 
 static const uint8_t g_expectedSignature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
                                                CRASH_CATCHER_SIGNATURE_BYTE1,

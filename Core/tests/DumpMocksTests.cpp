@@ -181,7 +181,7 @@ TEST(DumpMocks, VerifyDumpMemory_Issue3WritesOfVaryingSizes_ShouldReturnTrue)
 TEST(DumpMocks, GetRamRegions_ShouldReturnNullByDefault)
 {
     const CrashCatcherMemoryRegion* pRegions = CrashCatcher_GetMemoryRegions();
-    CHECK_EQUAL(NULL, pRegions);
+    POINTERS_EQUAL(NULL, pRegions);
 }
 
 TEST(DumpMocks, GetRamRegions_SetToReturnValidPointer_Verify)
@@ -189,7 +189,7 @@ TEST(DumpMocks, GetRamRegions_SetToReturnValidPointer_Verify)
     const CrashCatcherMemoryRegion regions[] = { {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE} };
     DumpMocks_SetMemoryRegions(regions);
     const CrashCatcherMemoryRegion* pRegions = CrashCatcher_GetMemoryRegions();
-    CHECK_EQUAL(regions, pRegions);
+    POINTERS_EQUAL(regions, pRegions);
 }
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)

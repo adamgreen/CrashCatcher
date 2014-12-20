@@ -13,6 +13,12 @@
    limitations under the License.
 */
 
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
+#include <stdarg.h> 
+#include <string.h>
+#include <stdio.h>
+
 // Include headers from C modules under test.
 extern "C"
 {
@@ -36,7 +42,6 @@ extern "C"
     extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
 
 }
-#include <stdarg.h>
 
 
 // Include C++ headers for test harness.
