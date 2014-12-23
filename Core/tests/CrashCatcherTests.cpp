@@ -12,8 +12,6 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
-#define __STDC_LIMIT_MACROS
 #include <stdint.h>
 #include <string.h>
 
@@ -70,7 +68,7 @@ TEST_GROUP(CrashCatcher)
         initMemory();
         initCpuId();
         initFaultStatusRegisters();
-        if (INTPTR_MAX == INT64_MAX)
+        if (sizeof(int*) == sizeof(uint64_t))
             g_crashCatcherTestBaseAddress = (uint64_t)&m_emulatedPSP & 0xFFFFFFFF00000000ULL;
     }
 
