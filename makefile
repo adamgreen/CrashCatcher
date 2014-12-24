@@ -62,9 +62,9 @@ ifeq "$(OS)" "Windows_NT"
     EXE := .exe
 else
 ifeq "$(shell uname)" "Darwin"
-    GCOV_OBJDIR_FLAG=-object-directory
+    GCOV_OBJDIR_FLAG := -object-directory
 else
-    GCOV_OBJDIR_FLAG=--object-directory
+    GCOV_OBJDIR_FLAG := --object-directory
 endif
     MAKEDIR = mkdir -p $(dir $@)
     REMOVE := rm
@@ -141,17 +141,31 @@ define gcov_link_exe
 	$Q $(MAKEDIR) $(QUIET)
 	$Q $($1_LD) $(GCOV_$1_LDFLAGS) $^ -o $@
 endef
+ifeq "$(OS)" "Windows_NT"
 define run_gcov
     .PHONY : GCOV_$1
     GCOV_$1 : GCOV_RUN_$1_TESTS
 		$Q $(REMOVE) $1_output.txt $(QUIET)
-		$Q $(MAKEDIR) -p gcov/$1_tests $(QUIET)
+		$Q mkdir $(subst /,\,gcov/$1_tests) $(QUIET)
+		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(dir $i)$(notdir $i)  >> $1_output.txt 2>nul &&) REM
+		$Q move $1_output.txt gcov/$1_tests/ $(QUIET)
+		$Q move *.gcov gcov/$1_tests/ $(QUIET)
+		$Q CppUTest\scripts\filterGcov.cmd gcov\$1_tests\$1_output.txt gcov\$1_tests\$1.txt
+		$Q type gcov\$1_tests\$1.txt
+endef
+else
+define run_gcov
+    .PHONY : GCOV_$1
+    GCOV_$1 : GCOV_RUN_$1_TESTS
+		$Q $(REMOVE) $1_output.txt $(QUIET)
+		$Q mkdir -p gcov/$1_tests $(QUIET)
 		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(GCOV_OBJDIR_FLAG)=$(dir $i) $(notdir $i) >> $1_output.txt ;)
 		$Q mv $1_output.txt gcov/$1_tests/ $(QUIET)
 		$Q mv *.gcov gcov/$1_tests/ $(QUIET)
 		$Q CppUTest/scripts/filterGcov.sh gcov/$1_tests/$1_output.txt /dev/null gcov/$1_tests/$1.txt
 		$Q cat gcov/$1_tests/$1.txt
 endef
+endif
 define make_library # ,LIBRARY,src_dirs,libname.a,includes
     HOST_$1_OBJ      := $(foreach i,$2,$(call host_objs,$i))
     GCOV_HOST_$1_OBJ := $(foreach i,$2,$(call gcov_host_objs,$i))
