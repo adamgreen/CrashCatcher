@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,14 +22,12 @@
 /* Bit in LR to indicate whether PSP was used for automatic stacking of registers during exception entry. */
 #define LR_PSP (1 << 2)
 
+/* Bit in LR set to 0 when automatic stacking of floating point registers occurs during exception handling. */
+#define LR_FLOAT (1 << 4)
+
 
 /* Bit in auto stacked xPSR which indicates whether stack was force 8-byte aligned. */
 #define PSR_STACK_ALIGN (1 << 9)
-
-
-/* This magic sentinel value is placed at the bottom of stack and validated to make sure that the stack doesn't overflow
-   and overwrite it. */
-#define STACK_SENTINEL 0xACCE55ED
 
 
 /* This structure contains the integer registers that are automatically stacked by Cortex-M processor when it enters
@@ -44,6 +42,10 @@ typedef struct
     uint32_t lr;
     uint32_t pc;
     uint32_t psr;
+    /* The following floating point registers are only stacked when the LR_FLOAT bit is set in exceptionLR. */
+    uint32_t floats[16];
+    uint32_t fpscr;
+    uint32_t reserved; /* keeps 8-byte alignment */
 } CrashCatcherStackedRegisters;
 
 
@@ -66,13 +68,21 @@ typedef struct
 } CrashCatcherExceptionRegisters;
 
 
-// This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
-// processor.  Unit tests can write to this buffer to simulate stack overflow.
+/* This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
+   processor.  Unit tests can write to this buffer to simulate stack overflow. */
 extern uint32_t g_crashCatcherStack[];
 
 
 /* The main entry point into CrashCatcher.  Is called from the HardFault exception handler and unit tests. */
 void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegisters);
+
+/* Called from CrashCatcher core to copy all floating point registers to supplied buffer. The supplied buffer must be
+   large enough to contain 33 32-bit values (S0-S31 & FPCSR). */
+void CrashCatcher_CopyAllFloatingPointRegisters(uint32_t* pBuffer);
+
+/* Called from CrashCatcher core to copy upper 16 floating point registers to supplied buffer. The supplied buffer must be
+   large enough to contain 16 32-bit values (S16-S31). */
+void CrashCatcher_CopyUpperFloatingPointRegisters(uint32_t* pBuffer);
 
 
 #endif /* _CRASH_CATCHER_PRIV_H_ */

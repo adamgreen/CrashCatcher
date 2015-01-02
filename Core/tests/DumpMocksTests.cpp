@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -194,7 +194,7 @@ TEST(DumpMocks, GetRamRegions_SetToReturnValidPointer_Verify)
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)
 {
-    g_crashCatcherStack[0] = STACK_SENTINEL;
+    g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
     DumpMocks_EnableDumpStartStackOverflowSimulation();
     CrashCatcher_DumpStart();
     CHECK_EQUAL(0x00000000, g_crashCatcherStack[0]);
@@ -202,7 +202,7 @@ TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateDefaultsToNoModification)
 {
-    g_crashCatcherStack[0] = STACK_SENTINEL;
+    g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
     CrashCatcher_DumpStart();
-    CHECK_EQUAL(STACK_SENTINEL, g_crashCatcherStack[0]);
+    CHECK_EQUAL(CRASH_CATCHER_STACK_SENTINEL, g_crashCatcherStack[0]);
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
    limitations under the License.
 */
 #include <stdint.h>
-#include <stdarg.h> 
+#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -23,6 +23,7 @@ extern "C"
     #include <CrashCatcher.h>
     #include <CrashCatcherPriv.h>
     #include <DumpMocks.h>
+    #include <FloatMocks.h>
 
     // Provides the upper 32-bits of 64-bit pointer addresses.
     // When running unit tests on 64-bit machines, the 32-bit emulated PSP an MSP stack pointer addresses don't
@@ -39,6 +40,8 @@ extern "C"
     // The unit tests can point the core to a fake location for the fault status registers.
     extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
 
+    // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
+    extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
 }
 
 
@@ -49,12 +52,15 @@ extern "C"
 TEST_GROUP(CrashCatcher)
 {
     CrashCatcherExceptionRegisters m_exceptionRegisters;
+    uint32_t                       m_expectedFlags;
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8];
     uint32_t                       m_emulatedCpuId;
     uint32_t                       m_emulatedFaultStatusRegisters[5];
+    uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
+    uint32_t                       m_expectedFloatingPointRegisters[32+1];
     uint8_t                        m_memory[20];
     char                           m_expectedOutput[1025];
 
@@ -67,6 +73,7 @@ TEST_GROUP(CrashCatcher)
         initMemory();
         initCpuId();
         initFaultStatusRegisters();
+        initFloatingPoint();
         if (sizeof(int*) == sizeof(uint64_t))
             g_crashCatcherTestBaseAddress = (uint64_t)&m_emulatedPSP & 0xFFFFFFFF00000000ULL;
         g_crashCatcherDumpEndReturn = CRASH_CATCHER_EXIT;
@@ -133,6 +140,16 @@ TEST_GROUP(CrashCatcher)
         g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
     }
 
+    void initFloatingPoint()
+    {
+        m_expectedFlags = 0;
+        m_emulatedCoprocessorAccessControlRegister = 0;
+        g_pCrashCatcherCoprocessorAccessControlRegister = &m_emulatedCoprocessorAccessControlRegister;
+        for (size_t i = 0 ; i < 32 ; i++)
+            m_expectedFloatingPointRegisters[i] = i;
+        m_expectedFloatingPointRegisters[32] = 0x12345678;
+    }
+
     void teardown()
     {
         DumpMocks_Uninit();
@@ -162,7 +179,8 @@ TEST_GROUP(CrashCatcher)
                  "\r\n\r\nCRASH ENCOUNTERED\r\n"
                  "Enable logging and then press any key to start dump.\r\n"
                  "\r\n"
-                 "63430100\r\n"
+                 "63430200\r\n"
+                 "%08X\r\n"
                  "%08X%08X%08X%08X\r\n"
                  "%08X%08X%08X%08X\r\n"
                  "%08X%08X%08X%08X\r\n"
@@ -170,6 +188,7 @@ TEST_GROUP(CrashCatcher)
                  "%08X\r\n"
                  "%08X%08X%08X\r\n"
                  "%08X\r\n",
+                 byteSwap(m_expectedFlags),
                  byteSwap(m_emulatedMSP[0]), byteSwap(m_emulatedMSP[1]), byteSwap(m_emulatedMSP[2]), byteSwap(m_emulatedMSP[3]),
                  byteSwap(m_exceptionRegisters.r4), byteSwap(m_exceptionRegisters.r5), byteSwap(m_exceptionRegisters.r6),
                  byteSwap(m_exceptionRegisters.r7), byteSwap(m_exceptionRegisters.r8), byteSwap(m_exceptionRegisters.r9),
@@ -178,6 +197,55 @@ TEST_GROUP(CrashCatcher)
                  byteSwap(m_expectedSP),
                  byteSwap(m_emulatedMSP[5]), byteSwap(m_emulatedMSP[6]), byteSwap(m_emulatedMSP[7]),
                  byteSwap(m_exceptionRegisters.exceptionPSR));
+    }
+
+    void setExpectedFloatingPointRegisterOutput()
+    {
+        char floatingPointOutput[512];
+        snprintf(floatingPointOutput, sizeof(floatingPointOutput),
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X%08X%08X%08X\r\n"
+                 "%08X\r\n",
+                 byteSwap(m_expectedFloatingPointRegisters[0]),
+                 byteSwap(m_expectedFloatingPointRegisters[1]),
+                 byteSwap(m_expectedFloatingPointRegisters[2]),
+                 byteSwap(m_expectedFloatingPointRegisters[3]),
+                 byteSwap(m_expectedFloatingPointRegisters[4]),
+                 byteSwap(m_expectedFloatingPointRegisters[5]),
+                 byteSwap(m_expectedFloatingPointRegisters[6]),
+                 byteSwap(m_expectedFloatingPointRegisters[7]),
+                 byteSwap(m_expectedFloatingPointRegisters[8]),
+                 byteSwap(m_expectedFloatingPointRegisters[9]),
+                 byteSwap(m_expectedFloatingPointRegisters[10]),
+                 byteSwap(m_expectedFloatingPointRegisters[11]),
+                 byteSwap(m_expectedFloatingPointRegisters[12]),
+                 byteSwap(m_expectedFloatingPointRegisters[13]),
+                 byteSwap(m_expectedFloatingPointRegisters[14]),
+                 byteSwap(m_expectedFloatingPointRegisters[15]),
+                 byteSwap(m_expectedFloatingPointRegisters[16]),
+                 byteSwap(m_expectedFloatingPointRegisters[17]),
+                 byteSwap(m_expectedFloatingPointRegisters[18]),
+                 byteSwap(m_expectedFloatingPointRegisters[19]),
+                 byteSwap(m_expectedFloatingPointRegisters[20]),
+                 byteSwap(m_expectedFloatingPointRegisters[21]),
+                 byteSwap(m_expectedFloatingPointRegisters[22]),
+                 byteSwap(m_expectedFloatingPointRegisters[23]),
+                 byteSwap(m_expectedFloatingPointRegisters[24]),
+                 byteSwap(m_expectedFloatingPointRegisters[25]),
+                 byteSwap(m_expectedFloatingPointRegisters[26]),
+                 byteSwap(m_expectedFloatingPointRegisters[27]),
+                 byteSwap(m_expectedFloatingPointRegisters[28]),
+                 byteSwap(m_expectedFloatingPointRegisters[29]),
+                 byteSwap(m_expectedFloatingPointRegisters[30]),
+                 byteSwap(m_expectedFloatingPointRegisters[31]),
+                 byteSwap(m_expectedFloatingPointRegisters[32]));
+        strcat(m_expectedOutput, floatingPointOutput);
     }
 
     void appendExpectedMemoryOutput(const CrashCatcherMemoryRegion* pRegion, const char* pFormat, ...)
@@ -351,6 +419,21 @@ TEST(CrashCatcher, Dump5Words_ShouldSplitAcrossTwoLines)
                                m_memory[8], m_memory[9], m_memory[10], m_memory[11],
                                m_memory[12], m_memory[13], m_memory[14], m_memory[15],
                                m_memory[16], m_memory[17], m_memory[18], m_memory[19]);
+    appendExpectedTrailerOutput();
+    STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_NoAutoStack_ShouldDumpIntegerAndFloatingPointRegisters)
+{
+    static const int keyPress = '\n';
+
+    DumpMocks_SetGetcData(&keyPress);
+    m_emulatedCoprocessorAccessControlRegister = (3 << 20) | (3 << 22);
+    FloatMocks_SetAllFloatingPointRegisters(m_expectedFloatingPointRegisters);
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    m_expectedFlags |= CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    setExpectedRegisterOutput();
+    setExpectedFloatingPointRegisterOutput();
     appendExpectedTrailerOutput();
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }

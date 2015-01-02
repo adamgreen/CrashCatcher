@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ extern "C"
     #include <CrashCatcher.h>
     #include <CrashCatcherPriv.h>
     #include <DumpMocks.h>
+    #include <FloatMocks.h>
 
     // Provides the upper 32-bits of 64-bit pointer addresses.
     // When running unit tests on 64-bit machines, the 32-bit emulated PSP an MSP stack pointer addresses don't
@@ -32,6 +33,9 @@ extern "C"
 
     // The unit tests can point the core to a fake location for the fault status registers.
     extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
+
+    // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
+    extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
 }
 
 
@@ -50,13 +54,16 @@ static const uint8_t g_expectedSignature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
 TEST_GROUP(CrashCatcher)
 {
     CrashCatcherExceptionRegisters m_exceptionRegisters;
+    uint32_t                       m_expectedFlags;
     uint32_t                       m_emulatedPSP[8];
-    uint32_t                       m_emulatedMSP[8];
+    uint32_t                       m_emulatedMSP[8 + 16 + 1];
     uint32_t                       m_emulatedCpuId;
     uint32_t                       m_emulatedFaultStatusRegisters[5];
+    uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
     uint32_t                       m_faultStatusRegistersStart;
+    uint32_t                       m_expectedFloatingPointRegisters[32+1];
     uint8_t                        m_memory[16];
 
     void setup()
@@ -68,6 +75,7 @@ TEST_GROUP(CrashCatcher)
         initMemory();
         initCpuId();
         initFaultStatusRegisters();
+        initFloatingPoint();
         if (sizeof(int*) == sizeof(uint64_t))
             g_crashCatcherTestBaseAddress = (uint64_t)&m_emulatedPSP & 0xFFFFFFFF00000000ULL;
     }
@@ -133,6 +141,16 @@ TEST_GROUP(CrashCatcher)
         m_faultStatusRegistersStart = (uint32_t)(unsigned long)m_emulatedFaultStatusRegisters;
     }
 
+    void initFloatingPoint()
+    {
+        m_expectedFlags = 0;
+        m_emulatedCoprocessorAccessControlRegister = 0;
+        g_pCrashCatcherCoprocessorAccessControlRegister = &m_emulatedCoprocessorAccessControlRegister;
+        for (size_t i = 0 ; i < 32 ; i++)
+            m_expectedFloatingPointRegisters[i] = i;
+        m_expectedFloatingPointRegisters[32] = 0x12345678;
+    }
+
     void teardown()
     {
         DumpMocks_Uninit();
@@ -156,16 +174,27 @@ TEST_GROUP(CrashCatcher)
         m_expectedSP |= 4;
     }
 
-    void validateSignatureAndDumpedRegisters(bool usingMSP)
+    void emulateFloatingPointStacking()
+    {
+        m_exceptionRegisters.exceptionLR &= ~LR_FLOAT;
+        m_expectedSP += 18 * sizeof(uint32_t);
+        memcpy(&m_emulatedMSP[8], &m_expectedFloatingPointRegisters, 16 * sizeof(uint32_t));
+        m_emulatedMSP[8 + 16] = m_expectedFloatingPointRegisters[32];
+    }
+
+    void validateHeaderAndDumpedRegisters(bool usingMSP)
     {
         uint32_t* pSP = usingMSP ? m_emulatedMSP : m_emulatedPSP;
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(0, g_expectedSignature, CRASH_CATCHER_BYTE, sizeof(g_expectedSignature)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(1, &pSP[0], CRASH_CATCHER_BYTE, 4 * sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(2, &m_exceptionRegisters.r4, CRASH_CATCHER_BYTE, (11 - 4 + 1) * sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(3, &pSP[4], CRASH_CATCHER_BYTE, sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(4, &m_expectedSP, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(5, &pSP[5], CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(6, &m_exceptionRegisters.exceptionPSR, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(1, &m_expectedFlags, CRASH_CATCHER_BYTE, sizeof(m_expectedFlags)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(2, &pSP[0], CRASH_CATCHER_BYTE, 4 * sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(3, &m_exceptionRegisters.r4, CRASH_CATCHER_BYTE, (11 - 4 + 1) * sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(4, &pSP[4], CRASH_CATCHER_BYTE, sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(5, &m_expectedSP, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(6, &pSP[5], CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &m_exceptionRegisters.exceptionPSR, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
+        if (m_expectedFlags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
+            CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_expectedFloatingPointRegisters, CRASH_CATCHER_BYTE, sizeof(m_expectedFloatingPointRegisters)));
     }
 };
 
@@ -175,8 +204,8 @@ TEST(CrashCatcher, DumpRegistersOnly_MSP_StackAlignmentNeeded)
     emulateStackAlignmentDuringException();
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(7, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -184,8 +213,8 @@ TEST(CrashCatcher, DumpRegistersOnly_MSP_StackAlignmentNotNeeded)
 {
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(7, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -194,8 +223,8 @@ TEST(CrashCatcher, DumpRegistersOnly_PSP_StackAlignmentNotNeeded)
     emulatePSPEntry();
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(7, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_PSP);
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_PSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -204,9 +233,9 @@ TEST(CrashCatcher, DumpEndReturnTryAgainOnce_ShouldDumpTwice)
     DumpMocks_SetDumpEndLoops(1);
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(2, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(14, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    validateSignatureAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(16, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    validateHeaderAndDumpedRegisters(USING_MSP);
     CHECK_EQUAL(2, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -217,10 +246,10 @@ TEST(CrashCatcher, DumpOneDoubleByteRegion)
     DumpMocks_SetMemoryRegions(regions);
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_memory, CRASH_CATCHER_BYTE, 2));
+    CHECK_EQUAL(10, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_BYTE, 2));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -231,10 +260,10 @@ TEST(CrashCatcher, DumpOneWordRegion)
     DumpMocks_SetMemoryRegions(regions);
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_memory, CRASH_CATCHER_WORD, 1));
+    CHECK_EQUAL(10, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_WORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -245,10 +274,10 @@ TEST(CrashCatcher, DumpOneHalfwordRegion)
     DumpMocks_SetMemoryRegions(regions);
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_memory, CRASH_CATCHER_HALFWORD, 1));
+    CHECK_EQUAL(10, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_HALFWORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -261,14 +290,14 @@ TEST(CrashCatcher, DumpMultipleRegions)
     DumpMocks_SetMemoryRegions(regions);
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(13, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &m_memory, CRASH_CATCHER_BYTE, 1));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, &regions[1], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &m_memory[1], CRASH_CATCHER_HALFWORD, 1));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &regions[2], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(12, &m_memory[3], CRASH_CATCHER_WORD, 1));
+    CHECK_EQUAL(14, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, &m_memory, CRASH_CATCHER_BYTE, 1));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &regions[1], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &m_memory[1], CRASH_CATCHER_HALFWORD, 1));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(12, &regions[2], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(13, &m_memory[3], CRASH_CATCHER_WORD, 1));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
@@ -279,9 +308,9 @@ TEST(CrashCatcher, SimulateStackOverflow_ShouldAppendExtraMagicWordToEndOfData)
     DumpMocks_EnableDumpStartStackOverflowSimulation();
     CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, magicValueIndicatingStackOverflow,
+    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, magicValueIndicatingStackOverflow,
                                               CRASH_CATCHER_BYTE, sizeof(magicValueIndicatingStackOverflow)));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
@@ -300,15 +329,60 @@ TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegi
     m_emulatedFaultStatusRegisters[4] = 0x44444444;
         CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
-    CHECK_EQUAL(11, DumpMocks_GetDumpMemoryCallCount());
-    validateSignatureAndDumpedRegisters(USING_MSP);
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_memory, CRASH_CATCHER_WORD, 1));
+    CHECK_EQUAL(12, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, &regions[0], CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_WORD, 1));
 
     CrashCatcherMemoryRegion faultStatusRegisters = {m_faultStatusRegistersStart,
                                                      m_faultStatusRegistersStart + 5 * sizeof(uint32_t),
                                                      CRASH_CATCHER_BYTE};
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, &faultStatusRegisters, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &faultStatusRegisters, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_OnlyCp10Enabled_ShouldOnlyDumpIntegerRegisters)
+{
+    m_emulatedCoprocessorAccessControlRegister = 3 << 20;
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_OnlyCp11Enabled_ShouldOnlyDumpIntegerRegisters)
+{
+    m_emulatedCoprocessorAccessControlRegister = 3 << 22;
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_NoAutoStack_ShouldDumpIntegerAndFloatingPointRegisters)
+{
+    m_emulatedCoprocessorAccessControlRegister = (3 << 20) | (3 << 22);
+    FloatMocks_SetAllFloatingPointRegisters(m_expectedFloatingPointRegisters);
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    m_expectedFlags |= CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_AutoStack_ShouldDumpIntegerAndFloatingPointRegisters)
+{
+    m_emulatedCoprocessorAccessControlRegister = (3 << 20) | (3 << 22);
+    emulateFloatingPointStacking();
+    FloatMocks_SetUpperFloatingPointRegisters(&m_expectedFloatingPointRegisters[16]);
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    m_expectedFlags |= CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }

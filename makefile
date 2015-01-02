@@ -1,4 +1,4 @@
-# Copyright 2014 Adam Green (https://github.com/adamgreen)
+# Copyright 2015 Adam Green (https://github.com/adamgreen)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,11 +24,11 @@ endif
 
 arm : ARM_LIBS
 
-host : RUN_CPPUTEST_TESTS RUN_CORE_TESTS RUN_HEX_DUMP_TESTS
+host : RUN_CPPUTEST_TESTS RUN_FLOAT_MOCKS_TESTS RUN_CORE_TESTS RUN_HEX_DUMP_TESTS
 
 all : host arm
 
-gcov : RUN_CPPUTEST_TESTS GCOV_CORE GCOV_HEX_DUMP
+gcov : RUN_CPPUTEST_TESTS GCOV_FLOAT_MOCKS GCOV_CORE GCOV_HEX_DUMP
 
 clean :
 	@echo Cleaning CrashCatcher
@@ -206,11 +206,17 @@ $(eval $(call make_library,CPPUTEST,CppUTest/src/CppUTest CppUTest/src/Platforms
 $(eval $(call make_tests,CPPUTEST,CppUTest/tests,,))
 
 
+# Floating point support mocks to build and test.
+$(eval $(call make_library,FLOAT_MOCKS,FloatMocks/src,libFloatMocks.a,include Core/src))
+$(eval $(call make_tests,FLOAT_MOCKS,FloatMocks/tests,include Core/src,))
+$(eval $(call run_gcov,FLOAT_MOCKS))
+
+
 # CrashCatcher Core sources to build and test.
 ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src) $(ARMV6M_OBJDIR)/Core/src/FaultHandler_armv6m.o
 ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src) $(ARMV7M_OBJDIR)/Core/src/FaultHandler_armv7m.o
 $(eval $(call make_library,CORE,Core/src,libCrashCatcher.a,include Core/tests))
-$(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,))
+$(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,$(HOST_FLOAT_MOCKS_LIB)))
 $(eval $(call run_gcov,CORE))
 
 
@@ -218,7 +224,9 @@ $(eval $(call run_gcov,CORE))
 ARMV6M_HEX_DUMP_OBJ    := $(call armv6m_objs,HexDump/src)
 ARMV7M_HEX_DUMP_OBJ    := $(call armv7m_objs,HexDump/src)
 $(eval $(call make_library,HEX_DUMP,HexDump/src,libHexDump.a,include HexDump/tests))
-$(eval $(call make_tests,HEX_DUMP,HexDump/tests HexDump/mocks,include HexDump/tests HexDump/mocks HexDump/src Core/src,$(HOST_CORE_LIB)))
+$(eval $(call make_tests,HEX_DUMP,HexDump/tests HexDump/mocks, \
+                         include HexDump/tests HexDump/mocks HexDump/src Core/src, \
+                         $(HOST_CORE_LIB) $(HOST_FLOAT_MOCKS_LIB)))
 $(eval $(call run_gcov,HEX_DUMP))
 
 
