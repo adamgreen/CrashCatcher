@@ -213,8 +213,8 @@ $(eval $(call run_gcov,FLOAT_MOCKS))
 
 
 # CrashCatcher Core sources to build and test.
-ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src) $(ARMV6M_OBJDIR)/Core/src/FaultHandler_armv6m.o
-ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src) $(ARMV7M_OBJDIR)/Core/src/FaultHandler_armv7m.o
+ARMV6M_CORE_OBJ    := $(call armv6m_objs,Core/src) $(ARMV6M_OBJDIR)/Core/src/CrashCatcher_armv6m.o
+ARMV7M_CORE_OBJ    := $(call armv7m_objs,Core/src) $(ARMV7M_OBJDIR)/Core/src/CrashCatcher_armv7m.o
 $(eval $(call make_library,CORE,Core/src,libCrashCatcher.a,include Core/tests))
 $(eval $(call make_tests,CORE,Core/tests Core/mocks,include Core/tests Core/mocks Core/src,$(HOST_FLOAT_MOCKS_LIB)))
 $(eval $(call run_gcov,CORE))
