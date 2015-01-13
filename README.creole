@@ -364,6 +364,17 @@ git submodule update
 
 
 == How to Build
+=== Toolchain
+* **ARM:** Only the [[https://launchpad.net/gcc-arm-embedded | GNU Tools for ARM Embedded Processors]] are required for
+  building the code to run on ARM Cortex-M processors.
+* **Unit tests:** If you are going to be modifying the code and want to run the unit tests then you will also need
+  a **gcc** or **clang** toolchain appropriate for your platform:
+** **OS X**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
+   [[https://developer.apple.com/library/ios/technotes/tn2339/_index.html | it's command line tools]].
+** **Windows**: [[http://www.mingw.org/wiki/Getting_Started | MinGW]]
+** **Linux**: You will need gcc and g++.
+
+=== Makefile
 CrashCatcher has a makefile at the root of the project.  It supports these top
 level targets:
 * **arm**: This builds the ARMv6-M and ARMv7-M versions of the CrashCatcher code.  This is the default target if no
