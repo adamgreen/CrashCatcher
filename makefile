@@ -78,8 +78,10 @@ ARM_GCCFLAGS := -Os -g3 -mthumb -mthumb-interwork -Wall -Wextra -Werror -Wno-unu
 ARM_GCCFLAGS += -ffunction-sections -fdata-sections -fno-exceptions -fno-delete-null-pointer-checks -fomit-frame-pointer
 ARM_GPPFLAGS := $(ARM_GCCFLAGS) -fno-rtti
 ARM_GCCFLAGS += -std=gnu90
-ARM_LDFLAGS   = -mthumb -Wl,-Map=$(basename $@).map,--cref,--gc-sections
-ARM_ASFLAGS  := -mthumb -x assembler-with-cpp -MMD -MP
+ARM_LDFLAGS  := -mthumb -Wl,-Map=$(basename $@).map,--cref,--gc-sections
+ARM_ASFLAGS  := -g3 -mthumb -x assembler-with-cpp -MMD -MP
+ARMV6M_FLAGS := -mcpu=cortex-m0
+ARMV7M_FLAGS := -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=softfp
 
 # Flags to use when compiling binaries to run on this host system.
 HOST_GCCFLAGS := -O2 -g3 -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
@@ -87,7 +89,6 @@ HOST_GCCFLAGS += -ffunction-sections -fdata-sections -fno-common
 HOST_GCCFLAGS += -include CppUTest/include/CppUTest/MemoryLeakDetectorMallocMacros.h
 HOST_GPPFLAGS := $(HOST_GCCFLAGS) -include CppUTest/include/CppUTest/MemoryLeakDetectorNewMacros.h
 HOST_GCCFLAGS += -std=gnu90
-HOST_ASFLAGS  := -x assembler-with-cpp -MMD -MP
 
 # Output directories for intermediate object files.
 OBJDIR        := obj
@@ -309,22 +310,22 @@ ARM_LIBS : $(ARMV6M_LIBCRASHCATCHER_LIB) $(ARMV7M_LIBCRASHCATCHER_LIB) \
 $(ARMV6M_OBJDIR)/%.o : %.c
 	@echo Compiling $<
 	$Q $(MAKEDIR) $(QUIET)
-	$Q $(ARM_GCC) -mcpu=cortex-m0 $(ARM_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
+	$Q $(ARM_GCC) $(ARMV6M_FLAGS) $(ARM_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(ARMV6M_OBJDIR)/%.o : %.S
 	@echo Assembling $<
 	$Q $(MAKEDIR) $(QUIET)
-	$Q $(ARM_AS) -mcpu=cortex-m0 $(ARM_ASFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
+	$Q $(ARM_AS) $(ARMV6M_FLAGS) $(ARM_ASFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(ARMV7M_OBJDIR)/%.o : %.c
 	@echo Compiling $<
 	$Q $(MAKEDIR) $(QUIET)
-	$Q $(ARM_GCC) -mcpu=cortex-m3 $(ARM_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
+	$Q $(ARM_GCC) $(ARMV7M_FLAGS) $(ARM_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(ARMV7M_OBJDIR)/%.o : %.S
 	@echo Assembling $<
 	$Q $(MAKEDIR) $(QUIET)
-	$Q $(ARM_AS) -mcpu=cortex-m3 $(ARM_ASFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
+	$Q $(ARM_AS) $(ARMV7M_FLAGS) $(ARM_ASFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(HOST_OBJDIR)/%.o : %.c
 	@echo Compiling $<

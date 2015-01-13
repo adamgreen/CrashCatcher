@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
     .syntax unified
     .arch armv6-m
 
+    /* Called on Hard Fault exception.  Stacks important registers and calls CrashCatcher_Entry().
+
+        extern "C" void HardFault_Handler(void);
+    */
     .global HardFault_Handler
     .type HardFault_Handler, %function
     .thumb_func
-    /* extern "C" void HardFault_Handler(void);
-       Called on Hard Fault exception.  Stacks important registers and calls CrashCatcher_Entry().
-    */
 HardFault_Handler:
     /* Push the following onto the stack (see CrashCatcherExceptionRegisters structure). The g_crashCatcherStack buffer
        is reserved for use as the stack while CrashCatcher is running.
@@ -61,6 +62,40 @@ HardFault_Handler:
     // Let assembler know that we have hit the end of the HardFault_Handler function.
     .pool
     .size   HardFault_Handler, .-HardFault_Handler
+
+
+
+    /* Called from CrashCatcher core to copy all floating point registers to supplied buffer. The supplied buffer must
+       be large enough to contain 33 32-bit values (S0-S31 & FPSCR).
+
+        void CrashCatcher_CopyAllFloatingPointRegisters(uint32_t* pBuffer);
+    */
+    .global CrashCatcher_CopyAllFloatingPointRegisters
+    .type CrashCatcher_CopyAllFloatingPointRegisters, %function
+    .thumb_func
+CrashCatcher_CopyAllFloatingPointRegisters:
+    // Just return on ARMv6-M as it doesn't support floating point.
+    bx      lr
+
+    .pool
+    .size   CrashCatcher_CopyAllFloatingPointRegisters, .-CrashCatcher_CopyAllFloatingPointRegisters
+
+
+
+    /* Called from CrashCatcher core to copy upper 16 floating point registers to supplied buffer. The supplied buffer
+       must be large enough to contain 16 32-bit values (S16-S31).
+
+        void CrashCatcher_CopyUpperFloatingPointRegisters(uint32_t* pBuffer);
+    */
+    .global CrashCatcher_CopyUpperFloatingPointRegisters
+    .type CrashCatcher_CopyUpperFloatingPointRegisters, %function
+    .thumb_func
+CrashCatcher_CopyUpperFloatingPointRegisters:
+    // Just return on ARMv6-M as it doesn't support floating point.
+    bx      lr
+
+    .pool
+    .size   CrashCatcher_CopyUpperFloatingPointRegisters, .-CrashCatcher_CopyUpperFloatingPointRegisters
 
 
     .end

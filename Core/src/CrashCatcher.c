@@ -207,9 +207,10 @@ static void dumpFloatingPointRegisters(const Object* pObject)
     uint32_t allFloatingPointRegisters[32 + 1];
     if (areFloatingPointRegistersAutoStacked(pObject))
     {
+        /* Copy the upper floats first as that will cause a lazy copy of the auto-stacked registers. */
+        CrashCatcher_CopyUpperFloatingPointRegisters(&allFloatingPointRegisters[16]);
         memcpy(&allFloatingPointRegisters[0], &pObject->pSP->floats, sizeof(pObject->pSP->floats));
         allFloatingPointRegisters[32] = pObject->pSP->fpscr;
-        CrashCatcher_CopyUpperFloatingPointRegisters(&allFloatingPointRegisters[16]);
     }
     else
     {
