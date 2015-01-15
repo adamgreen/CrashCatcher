@@ -12,6 +12,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+#include "CrashCatcherPriv.h"
+
 /* Implementation of ARMv7-M assembly language code to trap exceptions and call CrashCatcher_Entry(). */
     .text
     .syntax unified
@@ -42,7 +44,7 @@ HardFault_Handler:
     mrs     r1, xpsr
     mrs     r2, psp
     mrs     r3, msp
-    ldr     sp, =(g_crashCatcherStack + 4 * 256)
+    ldr     sp, =(g_crashCatcherStack + 4 * CRASH_CATCHER_STACK_WORD_COUNT)
     push.w  {r1-r11,lr}
 
     // Call CrashCatcher_Entry with first argument pointing to registers that were just stacked.

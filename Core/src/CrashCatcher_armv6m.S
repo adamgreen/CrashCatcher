@@ -12,6 +12,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+#include "CrashCatcherPriv.h"
+
 /* Implementation of ARMv6-M assembly language code to trap exceptions and call CrashCatcher_Entry(). */
     .text
     .syntax unified
@@ -40,7 +42,7 @@ HardFault_Handler:
         r11
         exceptionLR */
     mrs     r12, msp
-    ldr     r0, =(g_crashCatcherStack + 4 * 256)
+    ldr     r0, =(g_crashCatcherStack + 4 * CRASH_CATCHER_STACK_WORD_COUNT)
     mov     sp, r0
     mov     r0, r8
     mov     r1, r9

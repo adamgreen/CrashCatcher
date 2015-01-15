@@ -16,6 +16,14 @@
 #ifndef _CRASH_CATCHER_PRIV_H_
 #define _CRASH_CATCHER_PRIV_H_
 
+
+/* Definitions used by assembly language and C code. */
+#define CRASH_CATCHER_STACK_WORD_COUNT 100
+
+
+/* Definitions only required from C code. */
+#if !__ASSEMBLER__
+
 #include <stdint.h>
 
 
@@ -70,7 +78,7 @@ typedef struct
 
 /* This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
    processor.  Unit tests can write to this buffer to simulate stack overflow. */
-extern uint32_t g_crashCatcherStack[];
+extern uint32_t g_crashCatcherStack[CRASH_CATCHER_STACK_WORD_COUNT];
 
 
 /* The main entry point into CrashCatcher.  Is called from the HardFault exception handler and unit tests. */
@@ -83,6 +91,8 @@ void CrashCatcher_CopyAllFloatingPointRegisters(uint32_t* pBuffer);
 /* Called from CrashCatcher core to copy upper 16 floating point registers to supplied buffer. The supplied buffer must be
    large enough to contain 16 32-bit values (S16-S31). */
 void CrashCatcher_CopyUpperFloatingPointRegisters(uint32_t* pBuffer);
+
+#endif // #if !__ASSEMBLER__
 
 
 #endif /* _CRASH_CATCHER_PRIV_H_ */
