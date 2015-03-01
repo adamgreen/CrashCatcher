@@ -129,8 +129,8 @@ void CrashCatcher_putc(int c);
 
 
 /* Macros which can generate a few forms of crashes. */
-#define CRASH_CATCHER_READ_FAULT()          (*(volatile unsigned int*)0xFFFFFFFF)
-#define CRASH_CATCHER_WRITE_FAULT()         (*(volatile unsigned int*)0xFFFFFFFF = 0x0)
+#define CRASH_CATCHER_READ_FAULT()          (*(volatile unsigned int*)0xFFFFFFF0)
+#define CRASH_CATCHER_WRITE_FAULT()         (*(volatile unsigned int*)0xFFFFFFF0 = 0x0)
 #define CRASH_CATCHER_INVALID_INSTRUCTION() { __asm volatile (".word 0xDE00"); }
 
 
