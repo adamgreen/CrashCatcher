@@ -335,7 +335,7 @@ TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegi
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_WORD, 1));
 
     CrashCatcherMemoryRegion faultStatusRegisters = {m_faultStatusRegistersStart,
-                                                     m_faultStatusRegistersStart + 5 * sizeof(uint32_t),
+                                                     m_faultStatusRegistersStart + 5 * (uint32_t)sizeof(uint32_t),
                                                      CRASH_CATCHER_BYTE};
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &faultStatusRegisters, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
