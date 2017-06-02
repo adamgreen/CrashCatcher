@@ -197,6 +197,11 @@ extern "C" const CrashCatcherMemoryRegion* CrashCatcher_GetMemoryRegions(void)
                                                         {0x20000000, 0x20008000, CRASH_CATCHER_BYTE},
                                                         {0x20008000, 0x20010000, CRASH_CATCHER_BYTE},
                                                         {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
+#elif defined(TARGET_DISCO_F429ZI)
+                                                        {0x20000000, 0x2001C000, CRASH_CATCHER_BYTE},
+                                                        {0x2001C000, 0x20020000, CRASH_CATCHER_BYTE},
+                                                        {0x20020000, 0x20030000, CRASH_CATCHER_BYTE},
+                                                        {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
 #else
     #error "Target device isn't supported."
 #endif
