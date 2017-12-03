@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ static void dumpR4toR11(const Object* pObject);
 static void dumpR12(const Object* pObject);
 static void dumpSP(const Object* pObject);
 static void dumpLR_PC_PSR(const Object* pObject);
-static void dumpExceptionPSR(const Object* pObject);
+static void dumpMSPandPSPandExceptionPSR(const Object* pObject);
 static void dumpFloatingPointRegisters(const Object* pObject);
 static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion);
 static void checkStackSentinelForStackOverflow(void);
@@ -85,7 +85,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         dumpR12(&object);
         dumpSP(&object);
         dumpLR_PC_PSR(&object);
-        dumpExceptionPSR(&object);
+        dumpMSPandPSPandExceptionPSR(&object);
         if (object.flags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
             dumpFloatingPointRegisters(&object);
         dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
@@ -197,9 +197,9 @@ static void dumpLR_PC_PSR(const Object* pObject)
     CrashCatcher_DumpMemory(&pObject->pSP->lr, CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t));
 }
 
-static void dumpExceptionPSR(const Object* pObject)
+static void dumpMSPandPSPandExceptionPSR(const Object* pObject)
 {
-    CrashCatcher_DumpMemory(&pObject->pExceptionRegisters->exceptionPSR, CRASH_CATCHER_BYTE, sizeof(uint32_t));
+    CrashCatcher_DumpMemory(&pObject->pExceptionRegisters->msp, CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t));
 }
 
 static void dumpFloatingPointRegisters(const Object* pObject)

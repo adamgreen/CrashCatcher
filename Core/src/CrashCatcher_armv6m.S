@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -49,9 +49,9 @@ HardFault_Handler:
     mov     r2, r10
     mov     r3, r11
     push    {r0-r3, lr}
-    mrs     r1, xpsr
+    mrs     r3, xpsr
     mrs     r2, psp
-    mov     r3, r12
+    mov     r1, r12
     push    {r1-r7}
 
     // Call CrashCatcher_Entry with first argument pointing to registers that were just stacked.

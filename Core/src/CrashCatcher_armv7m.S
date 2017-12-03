@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@ HardFault_Handler:
         r10
         r11
         exceptionLR */
-    mrs     r1, xpsr
+    mrs     r3, xpsr
     mrs     r2, psp
-    mrs     r3, msp
+    mrs     r1, msp
     ldr     sp, =(g_crashCatcherStack + 4 * CRASH_CATCHER_STACK_WORD_COUNT)
     push.w  {r1-r11,lr}
 

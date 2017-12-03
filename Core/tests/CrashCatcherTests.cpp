@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -192,7 +192,7 @@ TEST_GROUP(CrashCatcher)
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(4, &pSP[4], CRASH_CATCHER_BYTE, sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(5, &m_expectedSP, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(6, &pSP[5], CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &m_exceptionRegisters.exceptionPSR, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &m_exceptionRegisters.msp, CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
         if (m_expectedFlags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
             CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_expectedFloatingPointRegisters, CRASH_CATCHER_BYTE, sizeof(m_expectedFloatingPointRegisters)));
     }

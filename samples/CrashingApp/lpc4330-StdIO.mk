@@ -1,6 +1,6 @@
 PROJECT         := CrashingApp_StdIO
 DEVICES         := LPC4330_M4
-GCC4MBED_DIR    := ../../../gcc4mbed
+GCC4MBED_DIR    := ../../gcc4mbed
 NO_FLOAT_SCANF  := 1
 NO_FLOAT_PRINTF := 1
 INCDIRS         := ../../include

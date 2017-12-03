@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 
 /* Definitions used by assembly language and C code. */
-#define CRASH_CATCHER_STACK_WORD_COUNT 100
+#define CRASH_CATCHER_STACK_WORD_COUNT 125
 
 
 /* Definitions only required from C code. */
@@ -61,9 +61,9 @@ typedef struct
    CrashCatcher_Entry(). */
 typedef struct
 {
-    uint32_t exceptionPSR;
-    uint32_t psp;
     uint32_t msp;
+    uint32_t psp;
+    uint32_t exceptionPSR;
     uint32_t r4;
     uint32_t r5;
     uint32_t r6;

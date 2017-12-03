@@ -66,7 +66,7 @@ Implementing these functions provide the developer with the most flexibility for
 
 | CrashCatcher_DumpStart() | Called at the beginning of a crash dump. The developer should provide an implementation which prepares for the dump by opening a dump file, prompting the user, or whatever makes sense for their scenario. |
 | CrashCatcher_GetMemoryRegions() | Called to obtain an array of regions in memory that should be dumped as part of the crash.  This will typically be all RAM regions that contain volatile data.  For some crash scenarios, a developer may decide to also add peripheral registers of interest (ie. dump some ethernet registers when encountering crashes in the network stack.) If NULL is returned from this function, the core will only dump the registers. |
-| CrashCatcher_DumpMemory() | Called to dump the next chunk of memory (this memory may point to register contents which have been copied to memory by CrashCatcher already.  The element size will be 8-bits, 16-bits, or 32-bits.  The implementation should use reads of the specified size since some memory locations may only support reads of the indicated sized. |
+| CrashCatcher_DumpMemory() | Called to dump the next chunk of memory (this memory may contain the contents of registers which have already been copied to memory by CrashCatcher.)  The element size will be 8-bits, 16-bits, or 32-bits.  The implementation should use reads of the specified size since some memory locations may only support reads of the indicated sized. |
 | CrashCatcher_DumpEnd() | Called at the end of a crash dump. The developer should provide an implementation which cleans up at the end of dump. This could include closing a dump file, blinking LEDs, infinite looping, and/or returning CRASH_CATCHER_TRY_AGAIN if CrashCatcher should prepare to dump again incase user missed the first attempt. |
 
 ====HexDump Routines
@@ -86,21 +86,21 @@ again, incase they missed some data from the previous dump.
 CRASH ENCOUNTERED
 Enable logging and then press any key to start dump.
 
-63430200
+63430300
 00000000
-01000000587D0010647F0010FFFFFFFF
-3C010010CDAB56347856341200000000
-00C002407F0000005FE19BFBFF3FF7AC
-DC000010
+00000000010000000200000003000000
+04000000050000000600000007000000
+08000000090000000A0000000B000000
+0C000000
 687F0010
-1D0200003C02000000000081
-03000080
+FFFFFFFF0003000000000001
+487F00107809001003000000
 0000001000800010
 00BE0AE00D782D0668400824400000D3
 ...
 28ED00E03CED00E0
-008200000000004008000000FFFFFFFF
-FFFFFFFF
+00000100000000400800000034ED00E0
+38ED00E0
 
 End of dump
 
@@ -184,12 +184,12 @@ The first 4 bytes of a dump contain a header with the following format:
 |= Offset |= Value |= Hex |= ASCII |
 | 0 | CRASH_CATCHER_SIGNATURE_BYTE0 | 0x63 | 'c' |
 | 1 | CRASH_CATCHER_SIGNATURE_BYTE1 | 0x43 | 'C' |
-| 2 | CRASH_CATCHER_VERSION_MAJOR | 0x02 | |
+| 2 | CRASH_CATCHER_VERSION_MAJOR | 0x03 | |
 | 3 | CRASH_CATCHER_VERSION_MINOR | 0x00 | |
 
 Example from a HexDump:
 {{{
-63430200
+63430300
 }}}
 
 === Flags
@@ -225,6 +225,8 @@ They are always included in a dump and they are dumped in this order:
 | LR |
 | PC |
 | PSR |
+| MSP |
+| PSP |
 | exceptionPSR |
 
 There are two versions of the Program Status Register, PSR, in the dump file.  The first is the PSR value as seen by the
@@ -232,13 +234,13 @@ code which caused the crash.  The second is the PSR value for the fault handler 
 
 Example from a HexDump:
 {{{
-01000000587D0010647F0010FFFFFFFF
-3C010010CDAB56347856341200000000
-00C002407F0000005FE19BFBFF3FF7AC
-DC000010
+00000000010000000200000003000000
+04000000050000000600000007000000
+08000000090000000A0000000B000000
+0C000000
 687F0010
-1D0200003C02000000000081
-03000080
+FFFFFFFF0003000000000001
+487F00107809001003000000
 }}}
 
 The newlines are inconsistently spaced in the HexDump output because the registers aren't all stored in one contiguous
@@ -331,8 +333,8 @@ processor.
 Example from the end of a HexDump:
 {{{
 28ED00E03CED00E0
-008200000000004008000000FFFFFFFF
-FFFFFFFF
+00000100000000400800000034ED00E0
+38ED00E0
 }}}
 
 These 5 fault related registers start at an address of 0xE000ED28.
@@ -371,7 +373,7 @@ git submodule update
   building the code to run on ARM Cortex-M processors.
 * **Unit tests:** If you are going to be modifying the code and want to run the unit tests then you will also need
   a **gcc** or **clang** toolchain appropriate for your platform:
-** **OS X**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
+** **macOS**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
    [[https://developer.apple.com/library/ios/technotes/tn2339/_index.html | it's command line tools]].
 ** **Windows**: [[http://www.mingw.org/wiki/Getting_Started | MinGW]]
 ** **Linux**: You will need gcc and g++.
@@ -394,6 +396,6 @@ Example:\\
 {{{make clean all}}} - Build CrashCatcher by rebuilding everything.\\
 
 The build has been tested on the following operating systems:
-* OS X Mavericks
+* macOS High Sierra
 * Windows 7
 * Ubuntu 12.04

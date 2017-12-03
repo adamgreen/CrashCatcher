@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ TEST_GROUP(CrashCatcher)
                  "\r\n\r\nCRASH ENCOUNTERED\r\n"
                  "Enable logging and then press any key to start dump.\r\n"
                  "\r\n"
-                 "63430200\r\n"
+                 "63430300\r\n"
                  "%08X\r\n"
                  "%08X%08X%08X%08X\r\n"
                  "%08X%08X%08X%08X\r\n"
@@ -187,7 +187,7 @@ TEST_GROUP(CrashCatcher)
                  "%08X\r\n"
                  "%08X\r\n"
                  "%08X%08X%08X\r\n"
-                 "%08X\r\n",
+                 "%08X%08X%08X\r\n",
                  byteSwap(m_expectedFlags),
                  byteSwap(m_emulatedMSP[0]), byteSwap(m_emulatedMSP[1]), byteSwap(m_emulatedMSP[2]), byteSwap(m_emulatedMSP[3]),
                  byteSwap(m_exceptionRegisters.r4), byteSwap(m_exceptionRegisters.r5), byteSwap(m_exceptionRegisters.r6),
@@ -196,6 +196,8 @@ TEST_GROUP(CrashCatcher)
                  byteSwap(m_emulatedMSP[4]),
                  byteSwap(m_expectedSP),
                  byteSwap(m_emulatedMSP[5]), byteSwap(m_emulatedMSP[6]), byteSwap(m_emulatedMSP[7]),
+                 byteSwap((uint32_t)(uint64_t)m_emulatedMSP),
+                 byteSwap((uint32_t)(uint64_t)m_emulatedPSP),
                  byteSwap(m_exceptionRegisters.exceptionPSR));
     }
 
