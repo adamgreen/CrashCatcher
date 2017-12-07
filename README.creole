@@ -397,5 +397,5 @@ Example:\\
 
 The build has been tested on the following operating systems:
 * macOS High Sierra
-* Windows 7
-* Ubuntu 12.04
+* Windows 10
+* Ubuntu 16.04
