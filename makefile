@@ -87,6 +87,7 @@ ARMV7M_FLAGS := -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=softfp
 HOST_GCCFLAGS := -O2 -g3 -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
 HOST_GCCFLAGS += -ffunction-sections -fdata-sections -fno-common
 HOST_GCCFLAGS += -include CppUTest/include/CppUTest/MemoryLeakDetectorMallocMacros.h
+HOST_GCCFLAGS += -DRUNNING_HOST_TESTS
 HOST_GPPFLAGS := $(HOST_GCCFLAGS) -std=gnu++98 -include CppUTest/include/CppUTest/MemoryLeakDetectorNewMacros.h
 HOST_GCCFLAGS += -std=gnu90
 

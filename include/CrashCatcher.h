@@ -133,5 +133,12 @@ void CrashCatcher_putc(int c);
 #define CRASH_CATCHER_WRITE_FAULT()         (*(volatile unsigned int*)0xFFFFFFF0 = 0x0)
 #define CRASH_CATCHER_INVALID_INSTRUCTION() { __asm volatile (".word 0xDE00"); }
 
+/* Macro used to make some globals writeable from unit tests but constant when running on ARM processors. */
+#ifdef RUNNING_HOST_TESTS
+    #define CRASH_CATCHER_TEST_WRITEABLE
+#else
+    #define CRASH_CATCHER_TEST_WRITEABLE static const
+#endif
+
 
 #endif /* _CRASH_CATCHER_H_ */

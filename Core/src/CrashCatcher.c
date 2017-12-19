@@ -18,16 +18,16 @@
 
 
 /* Test harness will define this value on 64-bit machine to provide upper 32-bits of pointer addresses. */
-uint64_t g_crashCatcherTestBaseAddress;
+CRASH_CATCHER_TEST_WRITEABLE uint64_t g_crashCatcherTestBaseAddress;
 
 /* The unit tests can point the core to a fake location for the SCB->CPUID register. */
-uint32_t* g_pCrashCatcherCpuId = (uint32_t*)0xE000ED00;
+CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCpuId = (uint32_t*)0xE000ED00;
 
 /* The unit tests can point the core to a fake location for the fault status registers. */
-uint32_t* g_pCrashCatcherFaultStatusRegisters = (uint32_t*)0xE000ED28;
+CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherFaultStatusRegisters = (uint32_t*)0xE000ED28;
 
 /* The unit tests can point the core to a fake location for the Coprocessor Access Control Register. */
-uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister = (uint32_t*)0xE000ED88;
+CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister = (uint32_t*)0xE000ED88;
 
 
 /* Fault handler will switch MSP to use this area as the stack while CrashCatcher code is running.
