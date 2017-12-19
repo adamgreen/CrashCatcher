@@ -191,11 +191,8 @@ extern "C" const CrashCatcherMemoryRegion* CrashCatcher_GetMemoryRegions(void)
                                                         {0x10000000, 0x10002000, CRASH_CATCHER_BYTE},
                                                         {0x20004000, 0x20004800, CRASH_CATCHER_BYTE},
                                                         {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
-#elif defined(TARGET_LPC4330_M4)
-                                                        {0x10000000, 0x10020000, CRASH_CATCHER_BYTE},
-                                                        {0x10080000, 0x10092000, CRASH_CATCHER_BYTE},
-                                                        {0x20000000, 0x20008000, CRASH_CATCHER_BYTE},
-                                                        {0x20008000, 0x20010000, CRASH_CATCHER_BYTE},
+#elif defined(TARGET_K64F)
+                                                        {0x1FFF0000, 0x20030000, CRASH_CATCHER_BYTE},
                                                         {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE}
 #else
     #error "Target device isn't supported."
