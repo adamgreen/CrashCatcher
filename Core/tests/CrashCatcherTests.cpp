@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -47,6 +47,9 @@ static const uint8_t g_expectedSignature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
 #define USING_PSP false
 #define USING_MSP true
 
+#define NOP_INSTRUCTION     0xBF00
+#define BKPT_INSTRUCTION    0xBE00
+
 // Include C++ headers for test harness.
 #include <CppUTest/TestHarness.h>
 
@@ -64,6 +67,8 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_memoryStart;
     uint32_t                       m_faultStatusRegistersStart;
     uint32_t                       m_expectedFloatingPointRegisters[32+1];
+    int                            m_expectedIsBKPT;
+    uint16_t                       m_emulatedInstruction;
     uint8_t                        m_memory[16];
 
     void setup()
@@ -72,6 +77,7 @@ TEST_GROUP(CrashCatcher)
         initExceptionRegisters();
         initPSP();
         initMSP();
+        emulateNOP();
         initMemory();
         initCpuId();
         initFaultStatusRegisters();
@@ -104,7 +110,8 @@ TEST_GROUP(CrashCatcher)
         m_emulatedPSP[3] = 0xFFFF3333;
         m_emulatedPSP[4] = 0xFFFF4444;
         m_emulatedPSP[5] = 0xFFFF5555;
-        m_emulatedPSP[6] = 0xFFFF6666;
+        // Point PC to emulated instruction.
+        m_emulatedPSP[6] = (uint32_t)(unsigned long)&m_emulatedInstruction;
         m_emulatedPSP[7] = 0;
     }
 
@@ -116,8 +123,21 @@ TEST_GROUP(CrashCatcher)
         m_emulatedMSP[3] = 0x3333FFFF;
         m_emulatedMSP[4] = 0x4444FFFF;
         m_emulatedMSP[5] = 0x5555FFFF;
-        m_emulatedMSP[6] = 0x6666FFFF;
+        // Point PC to emulated instruction.
+        m_emulatedMSP[6] = (uint32_t)(unsigned long)&m_emulatedInstruction;
         m_emulatedMSP[7] = 0;
+    }
+
+    void emulateNOP()
+    {
+        m_emulatedInstruction = NOP_INSTRUCTION;
+        m_expectedIsBKPT = 0;
+    }
+
+    void emulateBKPT(uint8_t bkptNumber)
+    {
+        m_emulatedInstruction = BKPT_INSTRUCTION | (uint16_t)bkptNumber;
+        m_expectedIsBKPT = 1;
     }
 
     void initMemory()
@@ -153,6 +173,7 @@ TEST_GROUP(CrashCatcher)
 
     void teardown()
     {
+        validateDumpStartInfo();
         DumpMocks_Uninit();
     }
 
@@ -185,16 +206,28 @@ TEST_GROUP(CrashCatcher)
     void validateHeaderAndDumpedRegisters(bool usingMSP)
     {
         uint32_t* pSP = usingMSP ? m_emulatedMSP : m_emulatedPSP;
+        // Need to handle the fact that the PC on stack might have been advanced past a hardcoded breakpoint but the 
+        // dump would contain the original value at the time of the crash.
+        uint32_t  registersLR_PC_XPSR[3] = { pSP[5], (uint32_t)(unsigned long)&m_emulatedInstruction, pSP[7] };
+        
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(0, g_expectedSignature, CRASH_CATCHER_BYTE, sizeof(g_expectedSignature)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(1, &m_expectedFlags, CRASH_CATCHER_BYTE, sizeof(m_expectedFlags)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(2, &pSP[0], CRASH_CATCHER_BYTE, 4 * sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(3, &m_exceptionRegisters.r4, CRASH_CATCHER_BYTE, (11 - 4 + 1) * sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(4, &pSP[4], CRASH_CATCHER_BYTE, sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(5, &m_expectedSP, CRASH_CATCHER_BYTE, sizeof(uint32_t)));
-        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(6, &pSP[5], CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
+        CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(6, &registersLR_PC_XPSR[0], CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(7, &m_exceptionRegisters.msp, CRASH_CATCHER_BYTE, 3 * sizeof(uint32_t)));
         if (m_expectedFlags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
             CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(8, m_expectedFloatingPointRegisters, CRASH_CATCHER_BYTE, sizeof(m_expectedFloatingPointRegisters)));
+    }
+
+    void validateDumpStartInfo()
+    {
+        const CrashCatcherInfo* pInfo = DumpMocks_GetDumpStartInfo();
+
+        CHECK_EQUAL(m_expectedSP, pInfo->sp);
+        CHECK_EQUAL(m_expectedIsBKPT, pInfo->isBKPT);
     }
 };
 
@@ -226,6 +259,30 @@ TEST(CrashCatcher, DumpRegistersOnly_PSP_StackAlignmentNotNeeded)
     CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
     validateHeaderAndDumpedRegisters(USING_PSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
+{
+    uint32_t expectedPC = m_emulatedMSP[6] + 2;
+    emulateBKPT(0);
+    CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+    CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT255)
+{
+    uint32_t expectedPC = m_emulatedMSP[6] + 2;
+    emulateBKPT(255);
+    CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(8, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+    CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
 }
 
 TEST(CrashCatcher, DumpEndReturnTryAgainOnce_ShouldDumpTwice)

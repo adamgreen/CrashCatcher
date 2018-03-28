@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -48,6 +48,9 @@ extern "C"
 // Include C++ headers for test harness.
 #include <CppUTest/TestHarness.h>
 
+#define NOP_INSTRUCTION     0xBF00
+#define BKPT_INSTRUCTION    0xBE00
+
 
 TEST_GROUP(CrashCatcher)
 {
@@ -55,12 +58,14 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_expectedFlags;
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8];
+    uint16_t                       m_emulatedInstruction;
     uint32_t                       m_emulatedCpuId;
     uint32_t                       m_emulatedFaultStatusRegisters[5];
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
     uint32_t                       m_expectedFloatingPointRegisters[32+1];
+    int                            m_isBKPT;
     uint8_t                        m_memory[20];
     char                           m_expectedOutput[1025];
 
@@ -70,6 +75,7 @@ TEST_GROUP(CrashCatcher)
         initExceptionRegisters();
         initPSP();
         initMSP();
+        emulateNOP();
         initMemory();
         initCpuId();
         initFaultStatusRegisters();
@@ -104,7 +110,8 @@ TEST_GROUP(CrashCatcher)
         m_emulatedPSP[3] = 0xFFFF3333;
         m_emulatedPSP[4] = 0xFFFF4444;
         m_emulatedPSP[5] = 0xFFFF5555;
-        m_emulatedPSP[6] = 0xFFFF6666;
+        // Point PC to emulated instruction.
+        m_emulatedPSP[6] = (uint32_t)(unsigned long)&m_emulatedInstruction;
         m_emulatedPSP[7] = 0;
     }
 
@@ -116,8 +123,21 @@ TEST_GROUP(CrashCatcher)
         m_emulatedMSP[3] = 0x3333FFFF;
         m_emulatedMSP[4] = 0x4444FFFF;
         m_emulatedMSP[5] = 0x5555FFFF;
-        m_emulatedMSP[6] = 0x6666FFFF;
+        // Point PC to emulated instruction.
+        m_emulatedMSP[6] = (uint32_t)(unsigned long)&m_emulatedInstruction;
         m_emulatedMSP[7] = 0;
+    }
+
+    void emulateNOP()
+    {
+        m_emulatedInstruction = NOP_INSTRUCTION;
+        m_isBKPT = 0;
+    }
+
+    void emulateBKPT()
+    {
+        m_emulatedInstruction = BKPT_INSTRUCTION;
+        m_isBKPT = 1;
     }
 
     void initMemory()
@@ -176,7 +196,7 @@ TEST_GROUP(CrashCatcher)
     void setExpectedRegisterOutput()
     {
         snprintf(m_expectedOutput, sizeof(m_expectedOutput),
-                 "\r\n\r\nCRASH ENCOUNTERED\r\n"
+                 "\r\n\r\n%s ENCOUNTERED\r\n"
                  "Enable logging and then press any key to start dump.\r\n"
                  "\r\n"
                  "63430300\r\n"
@@ -188,6 +208,7 @@ TEST_GROUP(CrashCatcher)
                  "%08X\r\n"
                  "%08X%08X%08X\r\n"
                  "%08X%08X%08X\r\n",
+                 m_isBKPT ? "BREAKPOINT" : "CRASH",
                  byteSwap(m_expectedFlags),
                  byteSwap(m_emulatedMSP[0]), byteSwap(m_emulatedMSP[1]), byteSwap(m_emulatedMSP[2]), byteSwap(m_emulatedMSP[3]),
                  byteSwap(m_exceptionRegisters.r4), byteSwap(m_exceptionRegisters.r5), byteSwap(m_exceptionRegisters.r6),
@@ -195,7 +216,7 @@ TEST_GROUP(CrashCatcher)
                  byteSwap(m_exceptionRegisters.r10), byteSwap(m_exceptionRegisters.r11),
                  byteSwap(m_emulatedMSP[4]),
                  byteSwap(m_expectedSP),
-                 byteSwap(m_emulatedMSP[5]), byteSwap(m_emulatedMSP[6]), byteSwap(m_emulatedMSP[7]),
+                 byteSwap(m_emulatedMSP[5]), byteSwap((uint32_t)(unsigned long)&m_emulatedInstruction), byteSwap(m_emulatedMSP[7]),
                  byteSwap((uint32_t)(uint64_t)m_emulatedMSP),
                  byteSwap((uint32_t)(uint64_t)m_emulatedPSP),
                  byteSwap(m_exceptionRegisters.exceptionPSR));
@@ -436,6 +457,31 @@ TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_NoAutoStack_ShouldDumpInt
     m_expectedFlags |= CRASH_CATCHER_FLAGS_FLOATING_POINT;
     setExpectedRegisterOutput();
     setExpectedFloatingPointRegisterOutput();
+    appendExpectedTrailerOutput();
+    STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInDump)
+{
+    static const int keyPress = '\n';
+
+    DumpMocks_SetGetcData(&keyPress);
+    emulateBKPT();
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    setExpectedRegisterOutput();
+    appendExpectedTrailerOutput();
+    STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
+}
+
+TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_WithTryAgainExitCode_ShouldStillExitBecauseBreakpoint)
+{
+    static const int keyPress = '\n';
+
+    DumpMocks_SetGetcData(&keyPress);
+    emulateBKPT();
+    g_crashCatcherDumpEndReturn = CRASH_CATCHER_TRY_AGAIN;
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    setExpectedRegisterOutput();
     appendExpectedTrailerOutput();
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }

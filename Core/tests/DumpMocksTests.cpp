@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -26,8 +26,11 @@ extern "C"
 
 TEST_GROUP(DumpMocks)
 {
+    CrashCatcherInfo m_dummyInfo;
+    
     void setup()
     {
+        memset(&m_dummyInfo, 0, sizeof(m_dummyInfo));
         DumpMocks_Init();
     }
 
@@ -45,15 +48,37 @@ TEST(DumpMocks, GetDumpStartCallCount_MakeNoCalls_ShouldReturn0)
 
 TEST(DumpMocks, GetDumpStartCallCount_MakeOneCall_ShouldReturn1)
 {
-    CrashCatcher_DumpStart();
+    CrashCatcher_DumpStart(&m_dummyInfo);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
 }
 
 TEST(DumpMocks, GetDumpStartCallCount_MakeTwoCalls_ShouldReturn2)
 {
-    CrashCatcher_DumpStart();
-    CrashCatcher_DumpStart();
+    CrashCatcher_DumpStart(&m_dummyInfo);
+    CrashCatcher_DumpStart(&m_dummyInfo);
     CHECK_EQUAL(2, DumpMocks_GetDumpStartCallCount());
+}
+
+TEST(DumpMocks, GetDumpStartInfo_VerifyDeepCopyWithDefaultValues)
+{
+    CrashCatcher_DumpStart(&m_dummyInfo);
+
+    const CrashCatcherInfo* pInfo = DumpMocks_GetDumpStartInfo();
+    CHECK_FALSE(pInfo == &m_dummyInfo);
+    CHECK_TRUE(0 == memcmp(&m_dummyInfo, pInfo, sizeof(m_dummyInfo)));
+}
+
+TEST(DumpMocks, GetDumpStartInfo_VerifyDeepCopyWithNonDefaultValues)
+{
+    CrashCatcherInfo info;
+    info.sp = 0xBAADF00D;
+    info.isBKPT = 1;
+
+    CrashCatcher_DumpStart(&info);
+
+    const CrashCatcherInfo* pInfo = DumpMocks_GetDumpStartInfo();
+    CHECK_FALSE(pInfo == &info);
+    CHECK_TRUE(0 == memcmp(&info, pInfo, sizeof(info)));
 }
 
 TEST(DumpMocks, DumpEndCall_ShouldIndicateExitIsWantedOnFirstCall)
@@ -196,13 +221,13 @@ TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)
 {
     g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
     DumpMocks_EnableDumpStartStackOverflowSimulation();
-    CrashCatcher_DumpStart();
+    CrashCatcher_DumpStart(&m_dummyInfo);
     CHECK_EQUAL(0x00000000, g_crashCatcherStack[0]);
 }
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateDefaultsToNoModification)
 {
     g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
-    CrashCatcher_DumpStart();
+    CrashCatcher_DumpStart(&m_dummyInfo);
     CHECK_EQUAL(CRASH_CATCHER_STACK_SENTINEL, g_crashCatcherStack[0]);
 }

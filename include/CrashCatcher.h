@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -41,6 +41,16 @@
 #define CRASH_CATCHER_STACK_SENTINEL 0xACCE55ED
 
 
+/* Particulars of crash provided to CrashCatcher_DumpStart(). */
+typedef struct
+{
+    /* The SP, Stack Pointer, contained this value at the time of the fault. */
+    uint32_t    sp;
+    /* Was this fault actually just a hardcoded breakpoint from which it is safe to continue. */
+    int         isBKPT;
+} CrashCatcherInfo;
+
+
 /* The crash dump will have one of these entries for each memory region included in the dump file. */
 typedef struct
 {
@@ -62,7 +72,8 @@ typedef enum
 {
     /* Crash Catcher should loop around and try dumping again incase user missed it previous time. */
     CRASH_CATCHER_TRY_AGAIN = 0,
-    /* Crash Catcher should exit and return to caller.  This will typically just be used during testing. */
+    /* Crash Catcher should exit and return to caller.  This is used during unit testing or if the crash cause was 
+       actually a hardcoded breakpoint that should be logged and then execution continued. */
     CRASH_CATCHER_EXIT
 } CrashCatcherReturnCodes;
 
@@ -92,7 +103,7 @@ extern "C"
 
 /* Called at the beginning of crash dump. You should provide an implementation which prepares for the dump by opening
    a dump file, prompting the user to begin a crash dump, or whatever makes sense for your scenario. */
-void CrashCatcher_DumpStart(void);
+void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo);
 
 /* Called to obtain an array of regions in memory that should be dumped as part of the crash.  This will typically
    be all RAM regions that contain volatile data.  For some crash scenarios, a user may decide to also add peripheral
@@ -132,6 +143,9 @@ void CrashCatcher_putc(int c);
 #define CRASH_CATCHER_READ_FAULT()          (*(volatile unsigned int*)0xFFFFFFF0)
 #define CRASH_CATCHER_WRITE_FAULT()         (*(volatile unsigned int*)0xFFFFFFF0 = 0x0)
 #define CRASH_CATCHER_INVALID_INSTRUCTION() { __asm volatile (".word 0xDE00"); }
+
+/* Macro used to insert hardcoded breakpoint into user's code. */
+#define CRASH_CATCHER_BREAKPOINT()          { __asm volatile ("bkpt #0"); }
 
 /* Macro used to make some globals writeable from unit tests but constant when running on ARM processors. */
 #ifdef RUNNING_HOST_TESTS

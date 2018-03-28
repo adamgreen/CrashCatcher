@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -152,6 +152,59 @@ testPspMultipleOf8:
     // Let assembler know that we have hit the end of the function.
     .pool
     .size   testPspMultipleOf8, .-testPspMultipleOf8
+
+
+    .global testBreakpoints
+    .type testBreakpoints, %function
+    .thumb_func
+    /* extern "C" void testBreakpoints(void);
+       Set registers to known values, breakpoint, allow continuation, and breakpoint again to see if anything changed.
+    */
+testBreakpoints:
+    // Save away non-volatile registers that will be modified for testing.
+    mov     r0, r8
+    mov     r1, r9
+    mov     r2, r10
+    mov     r3, r11
+    push    {r0-r7}
+    
+    // Load incrementing values into R0-R12
+    movs    r0, #0
+    movs    r1, #1
+    movs    r2, #2
+    movs    r3, #3
+    movs    r4, #4
+    movs    r5, #5
+    movs    r6, #6
+    movs    r7, #7
+    mov     r8, r7
+    mov     r9, r7
+    mov     r10, r7
+    mov     r11, r7
+    mov     r12, r7
+    add     r8, r1
+    add     r9, r2
+    add     r10, r3
+    add     r11, r4
+    add     r12, r5
+
+    // Issue one hard coded breakpoint.
+    bkpt    #0
+
+    // Issue another hard coded breakpoint and see if dumps contain same values for all registers other than PC.
+    bkpt    #255
+
+    // Restore non-volatile registers and return to caller.
+    pop     {r0-r7}
+    mov     r8, r0
+    mov     r9, r1
+    mov     r10, r2
+    mov     r11, r3
+    bx      lr
+
+    // Let assembler know that we have hit the end of the function.
+    .pool
+    .size   testBreakpoints, .-testBreakpoints
 
 
 #if defined(TARGET_M4)

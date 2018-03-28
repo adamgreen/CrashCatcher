@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ typedef struct DumpMemoryItem
 
 
 static uint32_t                        g_dumpStartCallCount;
+static CrashCatcherInfo                g_dumpInfo;
 static int                             g_dumpStartSimulateStackOverflow;
 static uint32_t                        g_dumpEndCallCount;
 static uint32_t                        g_dumpLoopCount;
@@ -41,6 +42,7 @@ static void freeMemoryItems(void);
 void DumpMocks_Init(void)
 {
     g_dumpStartCallCount = 0;
+    memset(&g_dumpInfo, 0xFF, sizeof(g_dumpInfo));
     g_dumpStartSimulateStackOverflow = 0;
     g_dumpEndCallCount = 0;
     g_dumpMemoryItemCount = 0;
@@ -67,6 +69,11 @@ static void freeMemoryItems(void)
 uint32_t DumpMocks_GetDumpStartCallCount(void)
 {
     return g_dumpStartCallCount;
+}
+
+const CrashCatcherInfo* DumpMocks_GetDumpStartInfo(void)
+{
+    return &g_dumpInfo;
 }
 
 
@@ -117,11 +124,12 @@ int DumpMocks_VerifyDumpMemoryItem(uint32_t item, const void* pvMemory, CrashCat
 
 
 /* Mock implementation of CrashCatcher_Dump* routines. */
-void CrashCatcher_DumpStart(void)
+void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
     g_dumpStartCallCount++;
     if (g_dumpStartSimulateStackOverflow)
         g_crashCatcherStack[0] = 0;
+    memcpy(&g_dumpInfo, pInfo, sizeof(g_dumpInfo));
 }
 
 

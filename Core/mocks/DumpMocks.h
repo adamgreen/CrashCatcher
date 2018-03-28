@@ -1,4 +1,4 @@
-/* Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@
 void DumpMocks_Init(void);
 void DumpMocks_Uninit(void);
 
-uint32_t DumpMocks_GetDumpStartCallCount(void);
+uint32_t                DumpMocks_GetDumpStartCallCount(void);
+const CrashCatcherInfo* DumpMocks_GetDumpStartInfo(void);
+
 void     DumpMocks_EnableDumpStartStackOverflowSimulation(void);
 uint32_t DumpMocks_GetDumpEndCallCount(void);
 void     DumpMocks_SetDumpEndLoops(uint32_t timesToReturnTryAgain);

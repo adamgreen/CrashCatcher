@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -39,19 +39,21 @@ uint32_t g_crashCatcherStack[CRASH_CATCHER_STACK_WORD_COUNT];
 typedef struct
 {
     const CrashCatcherExceptionRegisters* pExceptionRegisters;
-    const CrashCatcherStackedRegisters*   pSP;
-    uint32_t                              sp;
+    CrashCatcherStackedRegisters*         pSP;
     uint32_t                              flags;
+    CrashCatcherInfo                      info;
 } Object;
 
 
 static Object initStackPointers(const CrashCatcherExceptionRegisters* pExceptionRegisters);
 static uint32_t getAddressOfExceptionStack(const CrashCatcherExceptionRegisters* pExceptionRegisters);
-static const void* uint32AddressToPointer(uint32_t address);
+static void* uint32AddressToPointer(uint32_t address);
 static void advanceStackPointerToValueBeforeException(Object* pObject);
 static int areFloatingPointRegistersAutoStacked(const Object* pObject);
 static void initFloatingPointFlag(Object* pObject);
 static int areFloatingPointCoprocessorsEnabled(void);
+static void initIsBKPT(Object* pObject);
+static int isBKPT(uint16_t instruction);
 static void setStackSentinel(void);
 static void dumpSignature(const Object* pObject);
 static void dumpFlags(const Object* pObject);
@@ -66,6 +68,7 @@ static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion);
 static void checkStackSentinelForStackOverflow(void);
 static int isARMv6MDevice(void);
 static void dumpFaultStatusRegisters(void);
+static void advanceProgramCounterPastHardcodedBreakpoint(const Object* pObject);
 
 
 void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegisters)
@@ -73,11 +76,12 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
     Object object = initStackPointers(pExceptionRegisters);
     advanceStackPointerToValueBeforeException(&object);
     initFloatingPointFlag(&object);
+    initIsBKPT(&object);
 
     do
     {
         setStackSentinel();
-        CrashCatcher_DumpStart();
+        CrashCatcher_DumpStart(&object.info);
         dumpSignature(&object);
         dumpFlags(&object);
         dumpR0toR3(&object);
@@ -94,14 +98,16 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         checkStackSentinelForStackOverflow();
     }
     while (CrashCatcher_DumpEnd() == CRASH_CATCHER_TRY_AGAIN);
+
+    advanceProgramCounterPastHardcodedBreakpoint(&object);
 }
 
 static Object initStackPointers(const CrashCatcherExceptionRegisters* pExceptionRegisters)
 {
     Object object;
     object.pExceptionRegisters = pExceptionRegisters;
-    object.sp = getAddressOfExceptionStack(pExceptionRegisters);
-    object.pSP = uint32AddressToPointer(object.sp);
+    object.info.sp = getAddressOfExceptionStack(pExceptionRegisters);
+    object.pSP = uint32AddressToPointer(object.info.sp);
     object.flags = 0;
     return object;
 }
@@ -114,23 +120,23 @@ static uint32_t getAddressOfExceptionStack(const CrashCatcherExceptionRegisters*
         return pExceptionRegisters->msp;
 }
 
-static const void* uint32AddressToPointer(uint32_t address)
+static void* uint32AddressToPointer(uint32_t address)
 {
     if (sizeof(uint32_t*) == 8)
-        return (const void*)(unsigned long)((uint64_t)address | g_crashCatcherTestBaseAddress);
+        return (void*)(unsigned long)((uint64_t)address | g_crashCatcherTestBaseAddress);
     else
-        return (const void*)(unsigned long)address;
+        return (void*)(unsigned long)address;
 }
 
 static void advanceStackPointerToValueBeforeException(Object* pObject)
 {
     /* Cortex-M processor always push 8 integer registers on the stack. */
-    pObject->sp += 8 * sizeof(uint32_t);
+    pObject->info.sp += 8 * sizeof(uint32_t);
     /* ARMv7-M processors can also push 16 single-precision floating point registers, FPSCR and a padding word. */
     if (areFloatingPointRegistersAutoStacked(pObject))
-        pObject->sp += (16 + 1 + 1) * sizeof(uint32_t);
+        pObject->info.sp += (16 + 1 + 1) * sizeof(uint32_t);
     /* Cortex-M processor may also have had to force 8-byte alignment before auto stacking registers. */
-    pObject->sp |= (pObject->pSP->psr & PSR_STACK_ALIGN) ? 4 : 0;
+    pObject->info.sp |= (pObject->pSP->psr & PSR_STACK_ALIGN) ? 4 : 0;
 }
 
 static int areFloatingPointRegistersAutoStacked(const Object* pObject)
@@ -150,6 +156,18 @@ static int areFloatingPointCoprocessorsEnabled(void)
     uint32_t              coprocessorAccessControl = *g_pCrashCatcherCoprocessorAccessControlRegister;
 
     return (coprocessorAccessControl & (coProcessor10and11EnabledBits)) == coProcessor10and11EnabledBits;
+}
+
+static void initIsBKPT(Object* pObject)
+{
+    const uint16_t* pInstruction = uint32AddressToPointer(pObject->pSP->pc);
+
+    pObject->info.isBKPT = isBKPT(*pInstruction);
+}
+
+static int isBKPT(uint16_t instruction)
+{
+    return (instruction & 0xFF00) == 0xBE00;
 }
 
 static void setStackSentinel(void)
@@ -189,7 +207,7 @@ static void dumpR12(const Object* pObject)
 
 static void dumpSP(const Object* pObject)
 {
-    CrashCatcher_DumpMemory(&pObject->sp, CRASH_CATCHER_BYTE, sizeof(uint32_t));
+    CrashCatcher_DumpMemory(&pObject->info.sp, CRASH_CATCHER_BYTE, sizeof(uint32_t));
 }
 
 static void dumpLR_PC_PSR(const Object* pObject)
@@ -258,4 +276,10 @@ static void dumpFaultStatusRegisters(void)
                                                       CRASH_CATCHER_WORD},
                                                      {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE} };
     dumpMemoryRegions(faultStatusRegion);
+}
+
+static void advanceProgramCounterPastHardcodedBreakpoint(const Object* pObject)
+{
+    if (pObject->info.isBKPT)
+        pObject->pSP->pc += 2;
 }

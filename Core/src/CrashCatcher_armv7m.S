@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -51,8 +51,13 @@ HardFault_Handler:
     mov     r0, sp
     bl      CrashCatcher_Entry
 
-    // CrashCatcher_Entry() shouldn't return but if it does, just infinite loop here.
-    b       .
+    // Only make it back here when CrashCatcher_DumpEnd() returns CRASH_CATCHER_EXIT to indicate that it would like
+    // execution to be restored back to the faulting code (typically a hard coded breakpoint).
+    // Restore non-volatile registers and SP to values they had upon entry to fault handler before resuming execution
+    // at point of fault.
+    pop.w   {r1-r11,lr}
+    mov     sp, r1
+    bx      lr
 
     // Let assembler know that we have hit the end of the HardFault_Handler function.
     .pool

@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 
 CRASH_CATCHER_TEST_WRITEABLE CrashCatcherReturnCodes g_crashCatcherDumpEndReturn = CRASH_CATCHER_TRY_AGAIN;
-
+static                       CrashCatcherInfo        g_info;
 
 static void printString(const char* pString);
 static void waitForUserInput(void);
@@ -28,10 +28,18 @@ static void dumpHalfwords(const uint16_t* pMemory, size_t elementCount);
 static void dumpWords(const uint32_t* pMemory, size_t elementCount);
 
 
-void CrashCatcher_DumpStart(void)
+void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
-    printString("\r\n\r\nCRASH ENCOUNTERED\r\n"
+    g_info = *pInfo;
+    
+    printString("\r\n\r\n");
+    if (pInfo->isBKPT)
+        printString("BREAKPOINT");
+    else
+        printString("CRASH");
+    printString(" ENCOUNTERED\r\n"
                  "Enable logging and then press any key to start dump.\r\n");
+    
     waitForUserInput();
     printString("\r\n");
 }
@@ -120,5 +128,8 @@ static void dumpWords(const uint32_t* pMemory, size_t elementCount)
 CrashCatcherReturnCodes CrashCatcher_DumpEnd(void)
 {
     printString("\r\nEnd of dump\r\n");
-    return g_crashCatcherDumpEndReturn;
+    if (g_crashCatcherDumpEndReturn == CRASH_CATCHER_TRY_AGAIN && g_info.isBKPT)
+        return CRASH_CATCHER_EXIT;
+    else
+        return g_crashCatcherDumpEndReturn;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ Serial g_pc(USBTX, USBRX);
 extern "C" void testMspMultipleOf8(void);
 extern "C" void testMspNotMultipleOf8(void);
 extern "C" void testPspMultipleOf8(void);
-extern "C" void testInitFPURegisters();
-
+extern "C" void testInitFPURegisters(void);
+extern "C" void testBreakpoints(void);
 
 static void enable8ByteStackAlignment();
 static void crashWithFPUDisabled();
@@ -40,6 +40,10 @@ int main()
 
     enable8ByteStackAlignment();
 
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC11U24)
+    mbed_interface_disconnect();
+#endif
+
     g_pc.baud(115200);
     while (1)
     {
@@ -53,6 +57,7 @@ int main()
         printf("7) Fault with FPU auto-stacking disabled.\r\n");
         printf("8) Fault with FPU auto-stacking enabled.\r\n");
         printf("9) Fault with FPU lazy auto-stacking.\r\n");
+        printf("10) Issue two breakpoints and return.\r\n");
         printf("Select option: ");
         fgets(buffer, sizeof(buffer), stdin);
         sscanf(buffer, "%d", &option);
@@ -85,6 +90,9 @@ int main()
             break;
         case 9:
             crashWithFPULazyAutoStacking();
+            break;
+        case 10:
+            testBreakpoints();
             break;
         default:
             continue;
