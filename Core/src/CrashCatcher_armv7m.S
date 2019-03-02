@@ -1,4 +1,4 @@
-/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -29,9 +29,9 @@
 HardFault_Handler:
     /* Push the following onto the stack (see CrashCatcherExceptionRegisters structure). The g_crashCatcherStack buffer
        is reserved for use as the stack while CrashCatcher is running.
-        exceptionPSR
-        psp
         msp
+        psp
+        exceptionPSR
         r4
         r5
         r6
