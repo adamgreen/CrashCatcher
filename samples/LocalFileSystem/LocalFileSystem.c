@@ -34,7 +34,7 @@ static void dumpWords(const uint32_t* pMemory, size_t elementCount);
 static void infiniteLoop(void);
 
 
-void CrashCatcher_DumpStart(void)
+void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
     g_coreDumpFile = semihost_open("crash.dmp", OPEN_W);
 }
