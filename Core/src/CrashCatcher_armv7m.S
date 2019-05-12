@@ -74,6 +74,7 @@ HardFault_Handler:
     .type CrashCatcher_CopyAllFloatingPointRegisters, %function
     .thumb_func
 CrashCatcher_CopyAllFloatingPointRegisters:
+#if CRASH_CATCHER_WITH_FPU
     // Grab a copy of FPSCR before issuing any other FP instructions.
     vmrs        r1, fpscr
 
@@ -82,7 +83,7 @@ CrashCatcher_CopyAllFloatingPointRegisters:
 
     // Move fpscr to pBuffer.
     str         r1, [r0]
-
+#endif
     // Return to caller.
     bx          lr
 
@@ -100,9 +101,10 @@ CrashCatcher_CopyAllFloatingPointRegisters:
     .type CrashCatcher_CopyUpperFloatingPointRegisters, %function
     .thumb_func
 CrashCatcher_CopyUpperFloatingPointRegisters:
+#if CRASH_CATCHER_WITH_FPU
     // Move s16 - s31 to pBuffer.
     vstmia.32   r0!, {s16 - s31}
-
+#endif
     // Return to caller.
     bx      lr
 
