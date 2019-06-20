@@ -55,7 +55,7 @@ static int areFloatingPointCoprocessorsEnabled(void);
 static void initIsBKPT(Object* pObject);
 static int isBKPT(uint16_t instruction);
 static void setStackSentinel(void);
-static void dumpSignature(const Object* pObject);
+static void dumpSignature(void);
 static void dumpFlags(const Object* pObject);
 static void dumpR0toR3(const Object* pObject);
 static void dumpR4toR11(const Object* pObject);
@@ -82,7 +82,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
     {
         setStackSentinel();
         CrashCatcher_DumpStart(&object.info);
-        dumpSignature(&object);
+        dumpSignature();
         dumpFlags(&object);
         dumpR0toR3(&object);
         dumpR4toR11(&object);
@@ -175,7 +175,7 @@ static void setStackSentinel(void)
     g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
 }
 
-static void dumpSignature(const Object* pObject)
+static void dumpSignature(void)
 {
     static const uint8_t signature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
                                          CRASH_CATCHER_SIGNATURE_BYTE1,
