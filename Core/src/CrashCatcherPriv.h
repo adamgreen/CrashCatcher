@@ -29,7 +29,7 @@
 
 
 /* Definitions only required from C code. */
-#if !__ASSEMBLER__
+#if !defined(__ASSEMBLER__) || (!__ASSEMBLER__)
 
 #include <stdint.h>
 
@@ -99,7 +99,7 @@ void CrashCatcher_CopyAllFloatingPointRegisters(uint32_t* pBuffer);
    large enough to contain 16 32-bit values (S16-S31). */
 void CrashCatcher_CopyUpperFloatingPointRegisters(uint32_t* pBuffer);
 
-#endif // #if !__ASSEMBLER__
+#endif // #if !defined(__ASSEMBLER__) || (!__ASSEMBLER__)
 
 
 #endif /* _CRASH_CATCHER_PRIV_H_ */
