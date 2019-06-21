@@ -36,6 +36,7 @@ static void infiniteLoop(void);
 
 void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
+    (void)pInfo;
     g_coreDumpFile = semihost_open("crash.dmp", OPEN_W);
 }
 
