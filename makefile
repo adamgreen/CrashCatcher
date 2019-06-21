@@ -1,4 +1,4 @@
-# Copyright 2017 Adam Green (https://github.com/adamgreen)
+# Copyright 2019 Adam Green (https://github.com/adamgreen)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ endif
 endif
 
 # Flags to use when cross-compiling ARM binaries.
-ARM_GCCFLAGS := -Os -g3 -mthumb -mthumb-interwork -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
+ARM_GCCFLAGS := -Os -g3 -mthumb -mthumb-interwork -Wall -Wextra -Werror -MMD -MP
 ARM_GCCFLAGS += -ffunction-sections -fdata-sections -fno-exceptions -fno-delete-null-pointer-checks -fomit-frame-pointer
 ARM_GPPFLAGS := $(ARM_GCCFLAGS) -fno-rtti
 ARM_GCCFLAGS += -std=gnu90
