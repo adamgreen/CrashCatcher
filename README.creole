@@ -29,6 +29,10 @@ to be used with CrashDebug can be found [[https://github.com/adamgreen/CrashDebu
 
 
 == How it Works
+In addition to the documentation below you can also check out
+[[http://www.cyrilfougeray.com/2020/07/27/firmware-logs-with-stack-trace.html | Cyril Fougeray's great blog post]]
+where he describes using the CrashCatcher library as a part of his logging solution.
+
 === Catching the Hard Fault
 A typical CMSIS based build system for Cortex-M parts will have a hard fault interrupt vector which calls a function
 with the following prototype:
@@ -119,7 +123,7 @@ device and to the Cortex-M processor itself via the LocalFileSystem driver.  The
 [[https://github.com/adamgreen/CrashCatcher/blob/master/samples/LocalFileSystem/LocalFileSystem.c | LocalFileSystem sample]]
 uses this driver to create a CRASH.DMP file on the FLASH drive when a crash is encountered.  The following table gives
 an overview of what this sample does for each of CrashCatcher's required routines:
- 
+
 | CrashCatcher_DumpStart() | It opens/creates the CRASH.DMP file.  The g_coreDumpFile global stores the file handle to be used in subsequent write calls. |
 | CrashCatcher_DumpMemory() | It writes out the contents of the specified area of memory to CRASH.DMP |
 | CrashCatcher_DumpEnd() | It closes CRASH.DMP and enters an infinite loop. |
