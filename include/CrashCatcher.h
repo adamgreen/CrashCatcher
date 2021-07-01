@@ -20,10 +20,6 @@
 #include <stdlib.h>
 
 
-#define TRUE  1
-#define FALSE 0
-
-
 /* The crash dump start with a four byte header.  The first two bytes are "cC", the third byte is the major version
    number, and the fourth bytes is the minor version number. */
 #define CRASH_CATCHER_SIGNATURE_BYTE0 'c'
@@ -72,7 +68,7 @@ typedef enum
 {
     /* Crash Catcher should loop around and try dumping again incase user missed it previous time. */
     CRASH_CATCHER_TRY_AGAIN = 0,
-    /* Crash Catcher should exit and return to caller.  This is used during unit testing or if the crash cause was 
+    /* Crash Catcher should exit and return to caller.  This is used during unit testing or if the crash cause was
        actually a hardcoded breakpoint that should be logged and then execution continued. */
     CRASH_CATCHER_EXIT
 } CrashCatcherReturnCodes;
