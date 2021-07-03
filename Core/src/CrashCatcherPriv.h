@@ -18,7 +18,9 @@
 
 
 /* Definitions used by assembly language and C code. */
+#if !defined(CRASH_CATCHER_STACK_WORD_COUNT)
 #define CRASH_CATCHER_STACK_WORD_COUNT 125
+#endif
 
 /* Does this device support THUMB instructions for FPU access? */
 #ifdef __ARM_ARCH_7EM__

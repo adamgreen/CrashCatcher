@@ -113,6 +113,24 @@ CRASH ENCOUNTERED
 Enable logging and then press any key to start dump.
 }}}
 
+===CrashCatcher Stack
+When dumping the information about a crash, CrashCatcher sets the stack pointer to an area of memory reserved for this
+purpose. It uses its own stack as stack corruption may have been what lead to the crash in the first place. This
+reserved stack area is named {{{g_crashCatcherStack}}} and can be found in the Core/src/CrashCatcher.c source file. Its
+size is determined by the {{{CRASH_CATCHER_STACK_WORD_COUNT}}} macro in the Core/src/CrashCatcherPriv.h header.
+
+The CrashCatcher stack must be large enough to run CrashCatcher's code, any routines you provide, and any code that your
+routines end up calling. The current size specified by {{{CRASH_CATCHER_STACK_WORD_COUNT}}} may not be enough depending on
+the nature of your routines. If you need a larger stack, you can modify the {{{CRASH_CATCHER_STACK_WORD_COUNT}}} macro in
+Core/src/CrashCatcherPriv.h or provide it on the command line of your C compiler and assembler (using the
+{{{-DCRASH_CATCHER_STACK_WORD_COUNT=###}}} command line option) when building the .c and S sources in this library.
+
+When should you consider increasing the size of this stack?
+* If you ever see **ACCE55ED** bytes at the end of a dump, then CrashCatcher has detected that its stack was too small
+and you need to increase it.
+* If you get unexpected hangs or other odd behavior when attempting to write out your crash dump, then you should try
+increasing this value to see if it remedies the problem.
+
 ===Developer Routine Examples
 This CrashCatcher project includes a few examples of how to implement the above mentioned developer routines.  These
 examples were written and tested on mbed devices.
