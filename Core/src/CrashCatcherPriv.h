@@ -19,7 +19,7 @@
 
 /* Definitions used by assembly language and C code. */
 #if !defined(CRASH_CATCHER_STACK_WORD_COUNT)
-#define CRASH_CATCHER_STACK_WORD_COUNT 125
+#define CRASH_CATCHER_STACK_WORD_COUNT 126
 #endif
 
 /* Does this device support THUMB instructions for FPU access? */
@@ -84,6 +84,14 @@ typedef struct
     uint32_t exceptionLR;
 } CrashCatcherExceptionRegisters;
 
+/* This structure contains the internals with private data, only to be accessed by custom handlers. */
+typedef struct
+{
+    const CrashCatcherExceptionRegisters* pExceptionRegisters;
+    CrashCatcherStackedRegisters*         pSP;
+    uint32_t                              flags;
+    CrashCatcherInfo                      info;
+} CrashCatcherPrivObject;
 
 /* This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
    processor.  Unit tests can write to this buffer to simulate stack overflow. */
@@ -100,6 +108,9 @@ void CrashCatcher_CopyAllFloatingPointRegisters(uint32_t* pBuffer);
 /* Called from CrashCatcher core to copy upper 16 floating point registers to supplied buffer. The supplied buffer must be
    large enough to contain 16 32-bit values (S16-S31). */
 void CrashCatcher_CopyUpperFloatingPointRegisters(uint32_t* pBuffer);
+
+/* Singleton access to current CrashCatcher private object instance, only to be accessed by custom handlers. */
+const CrashCatcherPrivObject* CrashCatcher_GetPrivInstance(void);
 
 #endif // #if !defined(__ASSEMBLER__) || (!__ASSEMBLER__)
 

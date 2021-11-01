@@ -128,7 +128,7 @@ void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
     g_dumpStartCallCount++;
     if (g_dumpStartSimulateStackOverflow)
-        g_crashCatcherStack[0] = 0;
+        g_crashCatcherStack[1] = 0;
     memcpy(&g_dumpInfo, pInfo, sizeof(g_dumpInfo));
 }
 

@@ -36,13 +36,7 @@ CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCoprocessorAccessControlRe
 uint32_t g_crashCatcherStack[CRASH_CATCHER_STACK_WORD_COUNT];
 
 
-typedef struct
-{
-    const CrashCatcherExceptionRegisters* pExceptionRegisters;
-    CrashCatcherStackedRegisters*         pSP;
-    uint32_t                              flags;
-    CrashCatcherInfo                      info;
-} Object;
+typedef CrashCatcherPrivObject Object;
 
 
 static Object initStackPointers(const CrashCatcherExceptionRegisters* pExceptionRegisters);
@@ -54,6 +48,7 @@ static void initFloatingPointFlag(Object* pObject);
 static int areFloatingPointCoprocessorsEnabled(void);
 static void initIsBKPT(Object* pObject);
 static int isBKPT(uint16_t instruction);
+static void setStackPrivObjectInstance(const Object* pObject);
 static void setStackSentinel(void);
 static void dumpSignature(void);
 static void dumpFlags(const Object* pObject);
@@ -80,8 +75,12 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
 
     do
     {
+        setStackPrivObjectInstance(&object);
         setStackSentinel();
         CrashCatcher_DumpStart(&object.info);
+#if defined(CRASH_CATCHER_DUMP_CUSTOM_MEMORY_REGIONS_ONLY)
+        dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
+#else
         dumpSignature();
         dumpFlags(&object);
         dumpR0toR3(&object);
@@ -95,11 +94,17 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
         if (!isARMv6MDevice())
             dumpFaultStatusRegisters();
+#endif
         checkStackSentinelForStackOverflow();
     }
     while (CrashCatcher_DumpEnd() == CRASH_CATCHER_TRY_AGAIN);
 
     advanceProgramCounterPastHardcodedBreakpoint(&object);
+}
+
+const CrashCatcherPrivObject* CrashCatcher_GetPrivInstance(void)
+{
+  return (const CrashCatcherPrivObject*)g_crashCatcherStack[0];
 }
 
 static Object initStackPointers(const CrashCatcherExceptionRegisters* pExceptionRegisters)
@@ -170,9 +175,14 @@ static int isBKPT(uint16_t instruction)
     return (instruction & 0xFF00) == 0xBE00;
 }
 
+static void setStackPrivObjectInstance(const Object* pObject)
+{
+    g_crashCatcherStack[0] = (uint32_t)pObject;
+}
+
 static void setStackSentinel(void)
 {
-    g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
+    g_crashCatcherStack[1] = CRASH_CATCHER_STACK_SENTINEL;
 }
 
 static void dumpSignature(void)
@@ -252,7 +262,7 @@ static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion)
 
 static void checkStackSentinelForStackOverflow(void)
 {
-    if (g_crashCatcherStack[0] != CRASH_CATCHER_STACK_SENTINEL)
+    if (g_crashCatcherStack[1] != CRASH_CATCHER_STACK_SENTINEL)
     {
         uint8_t value[4] = {0xAC, 0xCE, 0x55, 0xED};
         CrashCatcher_DumpMemory(value, CRASH_CATCHER_BYTE, sizeof(value));

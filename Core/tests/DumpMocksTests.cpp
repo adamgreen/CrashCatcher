@@ -219,15 +219,15 @@ TEST(DumpMocks, GetRamRegions_SetToReturnValidPointer_Verify)
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateStackModified)
 {
-    g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
+    g_crashCatcherStack[1] = CRASH_CATCHER_STACK_SENTINEL;
     DumpMocks_EnableDumpStartStackOverflowSimulation();
     CrashCatcher_DumpStart(&m_dummyInfo);
-    CHECK_EQUAL(0x00000000, g_crashCatcherStack[0]);
+    CHECK_EQUAL(0x00000000, g_crashCatcherStack[1]);
 }
 
 TEST(DumpMocks, EnableDumpStartStackOverflowSimulation_ValidateDefaultsToNoModification)
 {
-    g_crashCatcherStack[0] = CRASH_CATCHER_STACK_SENTINEL;
+    g_crashCatcherStack[1] = CRASH_CATCHER_STACK_SENTINEL;
     CrashCatcher_DumpStart(&m_dummyInfo);
-    CHECK_EQUAL(CRASH_CATCHER_STACK_SENTINEL, g_crashCatcherStack[0]);
+    CHECK_EQUAL(CRASH_CATCHER_STACK_SENTINEL, g_crashCatcherStack[1]);
 }
