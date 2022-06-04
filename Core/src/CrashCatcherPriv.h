@@ -23,10 +23,16 @@
 #endif
 
 /* Does this device support THUMB instructions for FPU access? */
-#ifdef __ARM_ARCH_7EM__
+#ifdef __FPU_USED
 #define CRASH_CATCHER_WITH_FPU 1
 #else
 #define CRASH_CATCHER_WITH_FPU 0
+#endif
+
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+#define CRASH_CATCHER_ARMV7 1
+#else
+#define CRASH_CATCHER_ARMV7 0
 #endif
 
 
@@ -83,6 +89,16 @@ typedef struct
     uint32_t r11;
     uint32_t exceptionLR;
 } CrashCatcherExceptionRegisters;
+
+
+typedef struct
+{
+    uint32_t CFSR;  /* Configurable Fault Status Register */
+    uint32_t HFSR;  /* HardFault Status Register */
+    uint32_t DFSR;  /* Debug Fault Status Register */
+    uint32_t MMFAR; /* MemManage Fault Address Register */
+    uint32_t BFAR;  /* BusFault Address Register */
+} FaultStatusRegisters;
 
 
 /* This is the area of memory that would normally be used for the stack when running on an actual Cortex-M

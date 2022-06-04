@@ -20,11 +20,11 @@
 /* Test harness will define this value on 64-bit machine to provide upper 32-bits of pointer addresses. */
 CRASH_CATCHER_TEST_WRITEABLE uint64_t g_crashCatcherTestBaseAddress;
 
-/* The unit tests can point the core to a fake location for the SCB->CPUID register. */
-CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCpuId = (uint32_t*)0xE000ED00;
+/* The unit tests can fake ARM v6/v7. */
+CRASH_CATCHER_TEST_WRITEABLE uint32_t g_CrashCatcherARMv7 = CRASH_CATCHER_ARMV7;
 
 /* The unit tests can point the core to a fake location for the fault status registers. */
-CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherFaultStatusRegisters = (uint32_t*)0xE000ED28;
+CRASH_CATCHER_TEST_WRITEABLE FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters = (FaultStatusRegisters*)0xE000ED28;
 
 /* The unit tests can point the core to a fake location for the Coprocessor Access Control Register. */
 CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister = (uint32_t*)0xE000ED88;
@@ -66,7 +66,6 @@ static void dumpMSPandPSPandExceptionPSR(const Object* pObject);
 static void dumpFloatingPointRegisters(const Object* pObject);
 static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion);
 static void checkStackSentinelForStackOverflow(void);
-static int isARMv6MDevice(void);
 static void dumpFaultStatusRegisters(void);
 static void advanceProgramCounterPastHardcodedBreakpoint(const Object* pObject);
 
@@ -93,7 +92,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         if (object.flags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
             dumpFloatingPointRegisters(&object);
         dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
-        if (!isARMv6MDevice())
+        if (g_CrashCatcherARMv7)
             dumpFaultStatusRegisters();
         checkStackSentinelForStackOverflow();
     }
@@ -160,9 +159,17 @@ static int areFloatingPointCoprocessorsEnabled(void)
 
 static void initIsBKPT(Object* pObject)
 {
-    const uint16_t* pInstruction = uint32AddressToPointer(pObject->pSP->pc);
+    if (g_CrashCatcherARMv7)
+    {
+        // DEBUGEVT flag
+        pObject->info.isBKPT = (g_pCrashCatcherFaultStatusRegisters->HFSR & 0x80000000) == 0x80000000;
+    }
+    else
+    {
+        const uint16_t* pInstruction = uint32AddressToPointer(pObject->pSP->pc);
 
-    pObject->info.isBKPT = isBKPT(*pInstruction);
+        pObject->info.isBKPT = isBKPT(*pInstruction);
+    }
 }
 
 static int isBKPT(uint16_t instruction)
@@ -259,20 +266,11 @@ static void checkStackSentinelForStackOverflow(void)
     }
 }
 
-static int isARMv6MDevice(void)
-{
-    static const uint32_t armv6mArchitecture = 0xC << 16;
-    uint32_t              cpuId = *g_pCrashCatcherCpuId;
-    uint32_t              architecture = cpuId & (0xF << 16);
-
-    return (architecture == armv6mArchitecture);
-}
-
 static void dumpFaultStatusRegisters(void)
 {
     uint32_t                 faultStatusRegistersAddress = (uint32_t)(unsigned long)g_pCrashCatcherFaultStatusRegisters;
     CrashCatcherMemoryRegion faultStatusRegion[] = { {faultStatusRegistersAddress,
-                                                      faultStatusRegistersAddress + 5 * sizeof(uint32_t),
+                                                      faultStatusRegistersAddress + sizeof(FaultStatusRegisters),
                                                       CRASH_CATCHER_WORD},
                                                      {0xFFFFFFFF, 0xFFFFFFFF, CRASH_CATCHER_BYTE} };
     dumpMemoryRegions(faultStatusRegion);

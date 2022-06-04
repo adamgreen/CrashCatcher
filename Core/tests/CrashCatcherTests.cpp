@@ -28,11 +28,11 @@ extern "C"
     // contain enough bits to make a proper 64-bit pointer.  This provides those upper bits.
     extern uint64_t g_crashCatcherTestBaseAddress;
 
-    // The unit tests can point the core to a fake location for the SCB->CPUID register.
-    extern uint32_t* g_pCrashCatcherCpuId;
+    // The unit tests can fake ARM v6/v7.
+    extern uint32_t g_CrashCatcherARMv7;
 
     // The unit tests can point the core to a fake location for the fault status registers.
-    extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
+    extern FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters;
 
     // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
     extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
@@ -60,8 +60,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_expectedFlags;
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8 + 16 + 1];
-    uint32_t                       m_emulatedCpuId;
-    uint32_t                       m_emulatedFaultStatusRegisters[5];
+    FaultStatusRegisters           m_emulatedFaultStatusRegisters;
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
@@ -79,7 +78,7 @@ TEST_GROUP(CrashCatcher)
         initMSP();
         emulateNOP();
         initMemory();
-        initCpuId();
+        initArch();
         initFaultStatusRegisters();
         initFloatingPoint();
         if (sizeof(int*) == sizeof(uint64_t))
@@ -147,18 +146,16 @@ TEST_GROUP(CrashCatcher)
         m_memoryStart = (uint32_t)(unsigned long)m_memory;
     }
 
-    void initCpuId()
+    void initArch()
     {
-        static const uint32_t cpuIdCortexM0 = 0x410CC200;
-        m_emulatedCpuId = cpuIdCortexM0;
-        g_pCrashCatcherCpuId = &m_emulatedCpuId;
+        g_CrashCatcherARMv7 = 0;
     }
 
     void initFaultStatusRegisters()
     {
-        memset(m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
-        g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
-        m_faultStatusRegistersStart = (uint32_t)(unsigned long)m_emulatedFaultStatusRegisters;
+        memset(&m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
+        g_pCrashCatcherFaultStatusRegisters = &m_emulatedFaultStatusRegisters;
+        m_faultStatusRegistersStart = (uint32_t)(unsigned long)&m_emulatedFaultStatusRegisters;
     }
 
     void initFloatingPoint()
@@ -374,16 +371,15 @@ TEST(CrashCatcher, SimulateStackOverflow_ShouldAppendExtraMagicWordToEndOfData)
 
 TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegisters)
 {
-    static const uint32_t cpuIdCortexM3 = 0x410FC230;
     static const CrashCatcherMemoryRegion regions[] = { {m_memoryStart, m_memoryStart + 4, CRASH_CATCHER_WORD},
                                                         {   0xFFFFFFFF,        0xFFFFFFFF, CRASH_CATCHER_BYTE} };
     DumpMocks_SetMemoryRegions(regions);
-    m_emulatedCpuId = cpuIdCortexM3;
-    m_emulatedFaultStatusRegisters[0] = 0x12345678;
-    m_emulatedFaultStatusRegisters[1] = 0x11111111;
-    m_emulatedFaultStatusRegisters[2] = 0x22222222;
-    m_emulatedFaultStatusRegisters[3] = 0x33333333;
-    m_emulatedFaultStatusRegisters[4] = 0x44444444;
+    g_CrashCatcherARMv7 = 1;
+    m_emulatedFaultStatusRegisters.CFSR = 0x12345678;
+    m_emulatedFaultStatusRegisters.HFSR = 0x11111111;
+    m_emulatedFaultStatusRegisters.DFSR = 0x22222222;
+    m_emulatedFaultStatusRegisters.MMFAR = 0x33333333;
+    m_emulatedFaultStatusRegisters.BFAR = 0x44444444;
         CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(12, DumpMocks_GetDumpMemoryCallCount());
@@ -392,10 +388,10 @@ TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegi
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_WORD, 1));
 
     CrashCatcherMemoryRegion faultStatusRegisters = {m_faultStatusRegistersStart,
-                                                     m_faultStatusRegistersStart + 5 * (uint32_t)sizeof(uint32_t),
+                                                     m_faultStatusRegistersStart + sizeof(FaultStatusRegisters),
                                                      CRASH_CATCHER_BYTE};
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &faultStatusRegisters, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, sizeof(FaultStatusRegisters) / sizeof(uint32_t)));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 

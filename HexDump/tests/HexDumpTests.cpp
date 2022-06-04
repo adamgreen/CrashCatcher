@@ -34,8 +34,8 @@ extern "C"
     // to exit and not infinite loop.
     extern CrashCatcherReturnCodes g_crashCatcherDumpEndReturn;
 
-    // The unit tests can point the core to a fake location for the SCB->CPUID register.
-    extern uint32_t* g_pCrashCatcherCpuId;
+    // The unit tests can fake ARM v6/v7.
+    extern uint32_t g_CrashCatcherARMv7;
 
     // The unit tests can point the core to a fake location for the fault status registers.
     extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
@@ -59,8 +59,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8];
     uint16_t                       m_emulatedInstruction;
-    uint32_t                       m_emulatedCpuId;
-    uint32_t                       m_emulatedFaultStatusRegisters[5];
+    FaultStatusRegisters           m_emulatedFaultStatusRegisters;
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
@@ -77,7 +76,7 @@ TEST_GROUP(CrashCatcher)
         initMSP();
         emulateNOP();
         initMemory();
-        initCpuId();
+        initArch();
         initFaultStatusRegisters();
         initFloatingPoint();
         if (sizeof(int*) == sizeof(uint64_t))
@@ -147,17 +146,15 @@ TEST_GROUP(CrashCatcher)
         m_memoryStart = (uint32_t)(unsigned long)m_memory;
     }
 
-    void initCpuId()
+    void initArch()
     {
-        static const uint32_t cpuIdCortexM0 = 0x410CC200;
-        m_emulatedCpuId = cpuIdCortexM0;
-        g_pCrashCatcherCpuId = &m_emulatedCpuId;
+        g_CrashCatcherARMv7 = 0;
     }
 
     void initFaultStatusRegisters()
     {
-        memset(m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
-        g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
+        memset(&m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
+        g_pCrashCatcherFaultStatusRegisters = &m_emulatedFaultStatusRegisters;
     }
 
     void initFloatingPoint()
