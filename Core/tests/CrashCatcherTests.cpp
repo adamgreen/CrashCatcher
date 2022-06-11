@@ -1,4 +1,4 @@
-/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2022  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ extern "C"
     extern uint32_t* g_pCrashCatcherCpuId;
 
     // The unit tests can point the core to a fake location for the fault status registers.
-    extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
+    extern FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters;
 
     // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
     extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
@@ -43,6 +43,7 @@ static const uint8_t g_expectedSignature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
                                                CRASH_CATCHER_SIGNATURE_BYTE1,
                                                CRASH_CATCHER_VERSION_MAJOR,
                                                CRASH_CATCHER_VERSION_MINOR};
+static const uint32_t cpuIdCortexM3 = 0x410FC230;
 
 #define USING_PSP false
 #define USING_MSP true
@@ -61,7 +62,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8 + 16 + 1];
     uint32_t                       m_emulatedCpuId;
-    uint32_t                       m_emulatedFaultStatusRegisters[5];
+    FaultStatusRegisters           m_emulatedFaultStatusRegisters;
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
@@ -156,9 +157,9 @@ TEST_GROUP(CrashCatcher)
 
     void initFaultStatusRegisters()
     {
-        memset(m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
-        g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
-        m_faultStatusRegistersStart = (uint32_t)(unsigned long)m_emulatedFaultStatusRegisters;
+        memset(&m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
+        g_pCrashCatcherFaultStatusRegisters = &m_emulatedFaultStatusRegisters;
+        m_faultStatusRegistersStart = (uint32_t)(unsigned long)&m_emulatedFaultStatusRegisters;
     }
 
     void initFloatingPoint()
@@ -206,10 +207,10 @@ TEST_GROUP(CrashCatcher)
     void validateHeaderAndDumpedRegisters(bool usingMSP)
     {
         uint32_t* pSP = usingMSP ? m_emulatedMSP : m_emulatedPSP;
-        // Need to handle the fact that the PC on stack might have been advanced past a hardcoded breakpoint but the 
+        // Need to handle the fact that the PC on stack might have been advanced past a hardcoded breakpoint but the
         // dump would contain the original value at the time of the crash.
         uint32_t  registersLR_PC_XPSR[3] = { pSP[5], (uint32_t)(unsigned long)&m_emulatedInstruction, pSP[7] };
-        
+
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(0, g_expectedSignature, CRASH_CATCHER_BYTE, sizeof(g_expectedSignature)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(1, &m_expectedFlags, CRASH_CATCHER_BYTE, sizeof(m_expectedFlags)));
         CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(2, &pSP[0], CRASH_CATCHER_BYTE, 4 * sizeof(uint32_t)));
@@ -261,7 +262,14 @@ TEST(CrashCatcher, DumpRegistersOnly_PSP_StackAlignmentNotNeeded)
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
+// Ignore the BKTP tests if its support isn't enabled in CrashCatcherPriv.h
+#if CRASH_CATCHER_ISBKPT_SUPPORT
+#define BKPT_TEST TEST
+#else
+#define BKPT_TEST IGNORE_TEST
+#endif
+
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
 {
     uint32_t expectedPC = m_emulatedMSP[6] + 2;
     emulateBKPT(0);
@@ -273,7 +281,7 @@ TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
     CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT255)
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT255)
 {
     uint32_t expectedPC = m_emulatedMSP[6] + 2;
     emulateBKPT(255);
@@ -374,16 +382,15 @@ TEST(CrashCatcher, SimulateStackOverflow_ShouldAppendExtraMagicWordToEndOfData)
 
 TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegisters)
 {
-    static const uint32_t cpuIdCortexM3 = 0x410FC230;
     static const CrashCatcherMemoryRegion regions[] = { {m_memoryStart, m_memoryStart + 4, CRASH_CATCHER_WORD},
                                                         {   0xFFFFFFFF,        0xFFFFFFFF, CRASH_CATCHER_BYTE} };
     DumpMocks_SetMemoryRegions(regions);
     m_emulatedCpuId = cpuIdCortexM3;
-    m_emulatedFaultStatusRegisters[0] = 0x12345678;
-    m_emulatedFaultStatusRegisters[1] = 0x11111111;
-    m_emulatedFaultStatusRegisters[2] = 0x22222222;
-    m_emulatedFaultStatusRegisters[3] = 0x33333333;
-    m_emulatedFaultStatusRegisters[4] = 0x44444444;
+    m_emulatedFaultStatusRegisters.CFSR = 0x12345678;
+    m_emulatedFaultStatusRegisters.HFSR = 0x11111111;
+    m_emulatedFaultStatusRegisters.DFSR = 0x22222222;
+    m_emulatedFaultStatusRegisters.MMFAR = 0x33333333;
+    m_emulatedFaultStatusRegisters.BFAR = 0x44444444;
         CrashCatcher_Entry(&m_exceptionRegisters);
     CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
     CHECK_EQUAL(12, DumpMocks_GetDumpMemoryCallCount());
@@ -392,10 +399,10 @@ TEST(CrashCatcher, DumpOneWordRegion_EmulateCortexM3_ShouldAppendFaultStatusRegi
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(9, m_memory, CRASH_CATCHER_WORD, 1));
 
     CrashCatcherMemoryRegion faultStatusRegisters = {m_faultStatusRegistersStart,
-                                                     m_faultStatusRegistersStart + 5 * (uint32_t)sizeof(uint32_t),
+                                                     m_faultStatusRegistersStart + sizeof(FaultStatusRegisters),
                                                      CRASH_CATCHER_BYTE};
     CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(10, &faultStatusRegisters, CRASH_CATCHER_BYTE, 2 * sizeof(uint32_t)));
-    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
+    CHECK_TRUE(DumpMocks_VerifyDumpMemoryItem(11, &m_emulatedFaultStatusRegisters, CRASH_CATCHER_WORD, 5));
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 

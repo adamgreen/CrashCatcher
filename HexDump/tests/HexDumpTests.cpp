@@ -1,4 +1,4 @@
-/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2022  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ extern "C"
     extern uint32_t* g_pCrashCatcherCpuId;
 
     // The unit tests can point the core to a fake location for the fault status registers.
-    extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
+    extern FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters;
 
     // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
     extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
@@ -60,7 +60,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_emulatedMSP[8];
     uint16_t                       m_emulatedInstruction;
     uint32_t                       m_emulatedCpuId;
-    uint32_t                       m_emulatedFaultStatusRegisters[5];
+    FaultStatusRegisters           m_emulatedFaultStatusRegisters;
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
     uint32_t                       m_memoryStart;
@@ -156,8 +156,8 @@ TEST_GROUP(CrashCatcher)
 
     void initFaultStatusRegisters()
     {
-        memset(m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
-        g_pCrashCatcherFaultStatusRegisters = m_emulatedFaultStatusRegisters;
+        memset(&m_emulatedFaultStatusRegisters, 0, sizeof(m_emulatedFaultStatusRegisters));
+        g_pCrashCatcherFaultStatusRegisters = &m_emulatedFaultStatusRegisters;
     }
 
     void initFloatingPoint()
@@ -461,7 +461,14 @@ TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_NoAutoStack_ShouldDumpInt
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInDump)
+// Ignore the BKTP tests if its support isn't enabled in CrashCatcherPriv.h
+#if CRASH_CATCHER_ISBKPT_SUPPORT
+#define BKPT_TEST TEST
+#else
+#define BKPT_TEST IGNORE_TEST
+#endif
+
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInDump)
 {
     static const int keyPress = '\n';
 
@@ -473,7 +480,7 @@ TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInD
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_WithTryAgainExitCode_ShouldStillExitBecauseBreakpoint)
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_WithTryAgainExitCode_ShouldStillExitBecauseBreakpoint)
 {
     static const int keyPress = '\n';
 

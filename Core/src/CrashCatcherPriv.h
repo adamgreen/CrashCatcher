@@ -1,4 +1,4 @@
-/* Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2022  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -23,10 +23,16 @@
 #endif
 
 /* Does this device support THUMB instructions for FPU access? */
-#ifdef __ARM_ARCH_7EM__
+#ifdef __ARM_FP
 #define CRASH_CATCHER_WITH_FPU 1
 #else
 #define CRASH_CATCHER_WITH_FPU 0
+#endif
+
+/* Set to 1 to enable support for CrashCatcherInfo::isBKPT. Defaults to being disabled as checking PC for
+   hardcoded breakpoints when the PC being corrupted might be the reason for fault isn't safe. */
+#if !defined(CRASH_CATCHER_ISBKPT_SUPPORT)
+#define CRASH_CATCHER_ISBKPT_SUPPORT 0
 #endif
 
 
@@ -83,6 +89,16 @@ typedef struct
     uint32_t r11;
     uint32_t exceptionLR;
 } CrashCatcherExceptionRegisters;
+
+
+typedef struct
+{
+    uint32_t CFSR;  /* Configurable Fault Status Register */
+    uint32_t HFSR;  /* HardFault Status Register */
+    uint32_t DFSR;  /* Debug Fault Status Register */
+    uint32_t MMFAR; /* MemManage Fault Address Register */
+    uint32_t BFAR;  /* BusFault Address Register */
+} FaultStatusRegisters;
 
 
 /* This is the area of memory that would normally be used for the stack when running on an actual Cortex-M
