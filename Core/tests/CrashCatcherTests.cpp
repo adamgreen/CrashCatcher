@@ -262,14 +262,7 @@ TEST(CrashCatcher, DumpRegistersOnly_PSP_StackAlignmentNotNeeded)
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
 }
 
-// Ignore the BKTP tests if its support isn't enabled in CrashCatcherPriv.h
-#if CRASH_CATCHER_ISBKPT_SUPPORT
-#define BKPT_TEST TEST
-#else
-#define BKPT_TEST IGNORE_TEST
-#endif
-
-BKPT_TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
+TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
 {
     uint32_t expectedPC = m_emulatedMSP[6] + 2;
     emulateBKPT(0);
@@ -281,7 +274,7 @@ BKPT_TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT0)
     CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
 }
 
-BKPT_TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT255)
+TEST(CrashCatcher, DumpRegistersOnly_MSP_AdvanceProgramCounterPastBKPT255)
 {
     uint32_t expectedPC = m_emulatedMSP[6] + 2;
     emulateBKPT(255);
@@ -449,4 +442,46 @@ TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_AutoStack_ShouldDumpInteg
     CHECK_EQUAL(9, DumpMocks_GetDumpMemoryCallCount());
     validateHeaderAndDumpedRegisters(USING_MSP);
     CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+}
+
+TEST(CrashCatcher, SimulatePCBusError_NoAdvanceProgramCounterPastBKPT)
+{
+    const uint32_t IBUSERR = 1 << 8;
+    m_emulatedCpuId = cpuIdCortexM3;
+    m_emulatedFaultStatusRegisters.CFSR = IBUSERR;
+    m_emulatedFaultStatusRegisters.HFSR = 0x00000000;
+    m_emulatedFaultStatusRegisters.DFSR = 0x00000000;
+    m_emulatedFaultStatusRegisters.MMFAR = 0x00000000;
+    m_emulatedFaultStatusRegisters.BFAR = 0x00000000;
+    // Expect no PC advance even on BKPT because of fault type.
+    emulateBKPT(0);
+    uint32_t expectedPC = m_emulatedMSP[6] + 0;
+    m_expectedIsBKPT = 0;
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(10, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+    CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
+}
+
+TEST(CrashCatcher, SimulatePCMemManageError_NoAdvanceProgramCounterPastBKPT)
+{
+    const uint32_t IACCVIOL = 1 << 0;
+    m_emulatedCpuId = cpuIdCortexM3;
+    m_emulatedFaultStatusRegisters.CFSR = IACCVIOL;
+    m_emulatedFaultStatusRegisters.HFSR = 0x00000000;
+    m_emulatedFaultStatusRegisters.DFSR = 0x00000000;
+    m_emulatedFaultStatusRegisters.MMFAR = 0x00000000;
+    m_emulatedFaultStatusRegisters.BFAR = 0x00000000;
+    // Expect no PC advance even on BKPT because of fault type.
+    emulateBKPT(0);
+    uint32_t expectedPC = m_emulatedMSP[6] + 0;
+    m_expectedIsBKPT = 0;
+        CrashCatcher_Entry(&m_exceptionRegisters);
+    CHECK_EQUAL(1, DumpMocks_GetDumpStartCallCount());
+    CHECK_EQUAL(10, DumpMocks_GetDumpMemoryCallCount());
+    validateHeaderAndDumpedRegisters(USING_MSP);
+    CHECK_EQUAL(1, DumpMocks_GetDumpEndCallCount());
+    CHECK_EQUAL(expectedPC, m_emulatedMSP[6]);
 }

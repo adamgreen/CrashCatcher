@@ -29,10 +29,12 @@
 #define CRASH_CATCHER_WITH_FPU 0
 #endif
 
-/* Set to 1 to enable support for CrashCatcherInfo::isBKPT. Defaults to being disabled as checking PC for
+/* Set to 1 to enable support for CrashCatcherInfo::isBKPT. Defaults to being disabled on Cortex-M0 as checking PC for
    hardcoded breakpoints when the PC being corrupted might be the reason for fault isn't safe. */
-#if !defined(CRASH_CATCHER_ISBKPT_SUPPORT)
-#define CRASH_CATCHER_ISBKPT_SUPPORT 0
+#if !defined(CRASH_CATCHER_ISBKPT_SUPPORT) && defined(__ARM_ARCH) && (__ARM_ARCH == 6)
+    #define CRASH_CATCHER_ISBKPT_SUPPORT 0
+#elif !defined(CRASH_CATCHER_ISBKPT_SUPPORT) && (!defined(__ARM_ARCH) || (__ARM_ARCH != 6))
+    #define CRASH_CATCHER_ISBKPT_SUPPORT 1
 #endif
 
 

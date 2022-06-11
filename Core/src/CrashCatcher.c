@@ -54,6 +54,7 @@ static void initFloatingPointFlag(Object* pObject);
 static int areFloatingPointCoprocessorsEnabled(void);
 static void initIsBKPT(Object* pObject);
 static int isBKPT(uint16_t instruction);
+static int isBadPC();
 static void setStackSentinel(void);
 static void dumpSignature(void);
 static void dumpFlags(const Object* pObject);
@@ -160,18 +161,31 @@ static int areFloatingPointCoprocessorsEnabled(void)
 
 static void initIsBKPT(Object* pObject)
 {
-    if (CRASH_CATCHER_ISBKPT_SUPPORT)
+    /* On ARMv7M, can use fault status registers to determine if bad PC was cause of fault before checking to see if
+       it points to a BKPT instruction. */
+    if (CRASH_CATCHER_ISBKPT_SUPPORT && (isARMv6MDevice() || !isBadPC()))
     {
         const uint16_t* pInstruction = uint32AddressToPointer(pObject->pSP->pc);
         pObject->info.isBKPT = isBKPT(*pInstruction);
-        return;
     }
-    pObject->info.isBKPT = 0;
+    else
+    {
+        pObject->info.isBKPT = 0;
+    }
 }
 
 static int isBKPT(uint16_t instruction)
 {
     return (instruction & 0xFF00) == 0xBE00;
+}
+
+static int isBadPC()
+{
+    const uint32_t IACCVIOL = 1 << 0;
+    const uint32_t IBUSERR = 1 << 8;
+    const uint32_t badPCFaultBits = IACCVIOL | IBUSERR;
+
+    return g_pCrashCatcherFaultStatusRegisters->CFSR & badPCFaultBits;
 }
 
 static void setStackSentinel(void)
