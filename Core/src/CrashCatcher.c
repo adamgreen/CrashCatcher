@@ -1,4 +1,4 @@
-/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2022  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
 /* Test harness will define this value on 64-bit machine to provide upper 32-bits of pointer addresses. */
 CRASH_CATCHER_TEST_WRITEABLE uint64_t g_crashCatcherTestBaseAddress;
 
-/* The unit tests can fake ARM v6/v7. */
-CRASH_CATCHER_TEST_WRITEABLE uint32_t g_CrashCatcherARMv7 = CRASH_CATCHER_ARMV7;
+/* The unit tests can point the core to a fake location for the SCB->CPUID register. */
+CRASH_CATCHER_TEST_WRITEABLE uint32_t* g_pCrashCatcherCpuId = (uint32_t*)0xE000ED00;
 
 /* The unit tests can point the core to a fake location for the fault status registers. */
 CRASH_CATCHER_TEST_WRITEABLE FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters = (FaultStatusRegisters*)0xE000ED28;
@@ -66,6 +66,7 @@ static void dumpMSPandPSPandExceptionPSR(const Object* pObject);
 static void dumpFloatingPointRegisters(const Object* pObject);
 static void dumpMemoryRegions(const CrashCatcherMemoryRegion* pRegion);
 static void checkStackSentinelForStackOverflow(void);
+static int isARMv6MDevice(void);
 static void dumpFaultStatusRegisters(void);
 static void advanceProgramCounterPastHardcodedBreakpoint(const Object* pObject);
 
@@ -92,7 +93,7 @@ void CrashCatcher_Entry(const CrashCatcherExceptionRegisters* pExceptionRegister
         if (object.flags & CRASH_CATCHER_FLAGS_FLOATING_POINT)
             dumpFloatingPointRegisters(&object);
         dumpMemoryRegions(CrashCatcher_GetMemoryRegions());
-        if (g_CrashCatcherARMv7)
+        if (!isARMv6MDevice())
             dumpFaultStatusRegisters();
         checkStackSentinelForStackOverflow();
     }
@@ -159,17 +160,13 @@ static int areFloatingPointCoprocessorsEnabled(void)
 
 static void initIsBKPT(Object* pObject)
 {
-    if (g_CrashCatcherARMv7)
-    {
-        // DEBUGEVT flag
-        pObject->info.isBKPT = (g_pCrashCatcherFaultStatusRegisters->HFSR & 0x80000000) == 0x80000000;
-    }
-    else
+    if (CRASH_CATCHER_ISBKPT_SUPPORT)
     {
         const uint16_t* pInstruction = uint32AddressToPointer(pObject->pSP->pc);
-
         pObject->info.isBKPT = isBKPT(*pInstruction);
+        return;
     }
+    pObject->info.isBKPT = 0;
 }
 
 static int isBKPT(uint16_t instruction)
@@ -264,6 +261,15 @@ static void checkStackSentinelForStackOverflow(void)
         uint8_t value[4] = {0xAC, 0xCE, 0x55, 0xED};
         CrashCatcher_DumpMemory(value, CRASH_CATCHER_BYTE, sizeof(value));
     }
+}
+
+static int isARMv6MDevice(void)
+{
+    static const uint32_t armv6mArchitecture = 0xC << 16;
+    uint32_t              cpuId = *g_pCrashCatcherCpuId;
+    uint32_t              architecture = cpuId & (0xF << 16);
+
+    return (architecture == armv6mArchitecture);
 }
 
 static void dumpFaultStatusRegisters(void)

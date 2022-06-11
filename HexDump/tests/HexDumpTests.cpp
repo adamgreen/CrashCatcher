@@ -1,4 +1,4 @@
-/* Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/* Copyright (C) 2022  Adam Green (https://github.com/adamgreen)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -34,11 +34,11 @@ extern "C"
     // to exit and not infinite loop.
     extern CrashCatcherReturnCodes g_crashCatcherDumpEndReturn;
 
-    // The unit tests can fake ARM v6/v7.
-    extern uint32_t g_CrashCatcherARMv7;
+    // The unit tests can point the core to a fake location for the SCB->CPUID register.
+    extern uint32_t* g_pCrashCatcherCpuId;
 
     // The unit tests can point the core to a fake location for the fault status registers.
-    extern uint32_t* g_pCrashCatcherFaultStatusRegisters;
+    extern FaultStatusRegisters* g_pCrashCatcherFaultStatusRegisters;
 
     // The unit tests can point the core to a fake location for the Coprocessor Access Control Register.
     extern uint32_t* g_pCrashCatcherCoprocessorAccessControlRegister;
@@ -59,6 +59,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_emulatedPSP[8];
     uint32_t                       m_emulatedMSP[8];
     uint16_t                       m_emulatedInstruction;
+    uint32_t                       m_emulatedCpuId;
     FaultStatusRegisters           m_emulatedFaultStatusRegisters;
     uint32_t                       m_emulatedCoprocessorAccessControlRegister;
     uint32_t                       m_expectedSP;
@@ -76,7 +77,7 @@ TEST_GROUP(CrashCatcher)
         initMSP();
         emulateNOP();
         initMemory();
-        initArch();
+        initCpuId();
         initFaultStatusRegisters();
         initFloatingPoint();
         if (sizeof(int*) == sizeof(uint64_t))
@@ -146,9 +147,11 @@ TEST_GROUP(CrashCatcher)
         m_memoryStart = (uint32_t)(unsigned long)m_memory;
     }
 
-    void initArch()
+    void initCpuId()
     {
-        g_CrashCatcherARMv7 = 0;
+        static const uint32_t cpuIdCortexM0 = 0x410CC200;
+        m_emulatedCpuId = cpuIdCortexM0;
+        g_pCrashCatcherCpuId = &m_emulatedCpuId;
     }
 
     void initFaultStatusRegisters()
@@ -458,7 +461,14 @@ TEST(CrashCatcher, DumpRegistersOnly_EnableCp10AndCp11_NoAutoStack_ShouldDumpInt
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInDump)
+// Ignore the BKTP tests if its support isn't enabled in CrashCatcherPriv.h
+#if CRASH_CATCHER_ISBKPT_SUPPORT
+#define BKPT_TEST TEST
+#else
+#define BKPT_TEST IGNORE_TEST
+#endif
+
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInDump)
 {
     static const int keyPress = '\n';
 
@@ -470,7 +480,7 @@ TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_ShouldFlagAsBreakpointInD
     STRCMP_EQUAL(m_expectedOutput, DumpMocks_GetPutCData());
 }
 
-TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_WithTryAgainExitCode_ShouldStillExitBecauseBreakpoint)
+BKPT_TEST(CrashCatcher, DumpRegistersOnly_EmulateBreakpoint_WithTryAgainExitCode_ShouldStillExitBecauseBreakpoint)
 {
     static const int keyPress = '\n';
 
