@@ -176,7 +176,11 @@ static void initIsBKPT(Object* pObject)
 
 static int isBKPT(uint16_t instruction)
 {
-    return (instruction & 0xFF00) == 0xBE00;
+    if ((instruction & 0xFF00) == 0xBE00)
+    {
+        return (instruction & 0x00FF) + 1;
+    }
+    return 0;
 }
 
 static int isBadPC()
