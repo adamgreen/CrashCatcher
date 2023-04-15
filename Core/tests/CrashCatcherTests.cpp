@@ -70,6 +70,7 @@ TEST_GROUP(CrashCatcher)
     uint32_t                       m_expectedFloatingPointRegisters[32+1];
     int                            m_expectedIsBKPT;
     uint16_t                       m_emulatedInstruction;
+    uint8_t                        m_expectedBkptValue;
     uint8_t                        m_memory[16];
 
     void setup()
@@ -133,12 +134,14 @@ TEST_GROUP(CrashCatcher)
     {
         m_emulatedInstruction = NOP_INSTRUCTION;
         m_expectedIsBKPT = 0;
+        m_expectedBkptValue = 0;
     }
 
     void emulateBKPT(uint8_t bkptNumber)
     {
         m_emulatedInstruction = BKPT_INSTRUCTION | (uint16_t)bkptNumber;
         m_expectedIsBKPT = 1;
+        m_expectedBkptValue = bkptNumber;
     }
 
     void initMemory()
@@ -229,6 +232,7 @@ TEST_GROUP(CrashCatcher)
 
         CHECK_EQUAL(m_expectedSP, pInfo->sp);
         CHECK_EQUAL(m_expectedIsBKPT, pInfo->isBKPT);
+        CHECK_EQUAL(m_expectedBkptValue, pInfo->bkptNumber);
     }
 };
 

@@ -44,6 +44,8 @@ typedef struct
     uint32_t    sp;
     /* Was this fault actually just a hardcoded breakpoint from which it is safe to continue. */
     int         isBKPT;
+    /* If isBKPT is non-zero then this is the immediate value associated with that BKPT instruction. */
+    uint8_t     bkptNumber;
 } CrashCatcherInfo;
 
 
